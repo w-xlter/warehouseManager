@@ -1,0 +1,66 @@
+/* ===== Base page ===== */
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background-color: #f4f6f8;
+}
+
+/* ===== Table container (mobile support) ===== */
+.table-container {
+  width: 100%;
+  overflow-x: auto; /* enables horizontal scroll on small screens */
+}
+
+/* ===== Table ===== */
+table {
+  width: 100%;
+  min-width: 500px; /* prevents columns from collapsing */
+  border-collapse: collapse; /* merges borders */
+  background-color: white;
+}
+
+/* ===== Header ===== */
+th {
+  background-color: #2c3e50;
+  color: white;
+  text-align: left;
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+/* ===== Cells ===== */
+td {
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+/* ===== Row styles ===== */
+tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+tr:hover {
+  background-color: #eef2f5;
+}
+
+/* ===== Buttons (future-proof) ===== */
+.table-btn {
+  padding: 5px 10px;
+  border: 1px solid #3498db;
+  background-color: #3498db;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.table-btn:hover {
+  background-color: #2980b9;
+}
+
+/* ===== Mobile tweaks ===== */
+@media (max-width: 600px) {
+  th, td {
+    padding: 8px;
+    font-size: 14px;
+  }
+}
