@@ -1,9 +1,8 @@
-import * as API from "./api.js"
+import * as API from "./api.js";
+
+const LOCK_TIMEOUT = 3 * 60 * 1000;
 
 export function print(items) {
-    const LOCK_TIMEOUT = 3 * 60 * 1000;
-    const now = Date.now();
-
     const anchor = document.getElementById("stockTable");
     anchor.innerHTML = "";
 
@@ -22,83 +21,92 @@ export function print(items) {
     items.forEach(item => {
         const row = document.createElement("tr");
         row.id = `row-${item.id}`;
-
-        const timestamp = item.editing_at ? new Date(item.editing_at).getTime() : 0;
-        const isExpired = now - timestamp > LOCK_TIMEOUT;
-
-        // store dataset
-        row.dataset.editingBy = (!isExpired && item.editing_by) ? item.editing_by : "";
-        row.dataset.editingAt = item.editing_at || "";
-
-        const product = document.createElement("td");
-        product.textContent = item.product;
-
-        const qty = document.createElement("td");
-        qty.textContent = item.qty;
-
-        row.appendChild(product);
-        row.appendChild(qty);
-
-        // highlight only if NOT expired
-        if (item.editing_by && !isExpired) {
-            row.classList.add("editing");
-        }
-
+        updateRowUI(row, item);
         table.appendChild(row);
     });
 
     anchor.appendChild(table);
 }
 
+// central function to update a row
+export function updateRowUI(row, data) {
+    const now = Date.now();
+    const timestamp = data.editing_at ? new Date(data.editing_at).getTime() : 0;
+    const isExpired = now - timestamp > LOCK_TIMEOUT;
+
+    row.dataset.editingBy = (!isExpired && data.editing_by) ? data.editing_by : "";
+    row.dataset.editingAt = data.editing_at || "";
+
+    if (data.editing_by && !isExpired) {
+        row.classList.add("editing");
+    } else {
+        row.classList.remove("editing");
+    }
+
+    // add/update cells
+    if (!row.cells.length) {
+        const product = document.createElement("td");
+        product.textContent = data.product;
+        const qty = document.createElement("td");
+        qty.textContent = data.qty;
+        row.appendChild(product);
+        row.appendChild(qty);
+    } else {
+        row.cells[0].textContent = data.product;
+        row.cells[1].textContent = data.qty;
+    }
+}
+
+// attach click listener via event delegation
 export function attachRowHighlight(supabase, userId) {
-    const LOCK_TIMEOUT = 3 * 60 * 1000;
-    const table = document.querySelector("#stockTable table");
-    if (!table) return;
+    const container = document.getElementById("stockTable");
+    container.addEventListener("click", async e => {
+        const row = e.target.closest("tr");
+        if (!row || row.querySelector("th")) return;
 
-    table.querySelectorAll("tr").forEach(row => {
-        if (row.querySelector("th")) return;
+        const rowId = row.id.split("-")[1];
+        const now = Date.now();
+        const timestamp = row.dataset.editingAt ? new Date(row.dataset.editingAt).getTime() : 0;
+        const isExpired = now - timestamp > LOCK_TIMEOUT;
 
-        row.addEventListener("click", async () => {
-            const rowId = row.id.split("-")[1];
+        // someone else editing
+        if (row.dataset.editingBy && row.dataset.editingBy !== userId && !isExpired) return;
 
-            const timestamp = row.dataset.editingAt ? new Date(row.dataset.editingAt).getTime() : 0;
-            const isExpired = Date.now() - timestamp > LOCK_TIMEOUT;
-
-            if (row.dataset.editingBy && row.dataset.editingBy !== userId && !isExpired) return;
-
-            // UNLOCK
-            if (row.dataset.editingBy === userId) {
-                await supabase
-                    .from("testHouse")
-                    .update({ editing_by: null, editing_at: null })
-                    .eq("id", rowId);
-
-                row.dataset.editingBy = "";
-                row.dataset.editingAt = "";
-                row.classList.remove("editing");
-
-                return;
-            }
-
-            // UNLOCK previous
+        // unlock if you already own
+        if (row.dataset.editingBy === userId) {
             await supabase
                 .from("testHouse")
                 .update({ editing_by: null, editing_at: null })
-                .eq("editing_by", userId);
-
-            // 🔁 LOCK new
-            await supabase
-                .from("testHouse")
-                .update({
-                    editing_by: userId,
-                    editing_at: new Date().toISOString()
-                })
                 .eq("id", rowId);
 
-            // optimistic update
-            row.dataset.editingBy = userId;
-            row.dataset.editingAt = new Date().toISOString();
-            row.classList.add("editing");
-        });
+            updateRowUI(row, { ...row.dataset, editing_by: null, editing_at: null });
+            return;
+        }
+
+        // unlock previous row(s)
+        await supabase
+            .from("testHouse")
+            .update({ editing_by: null, editing_at: null })
+            .eq("editing_by", userId);
+
+        // lock new row
+        const nowISOString = new Date().toISOString();
+        await supabase
+            .from("testHouse")
+            .update({ editing_by: userId, editing_at: nowISOString })
+            .eq("id", rowId);
+
+        updateRowUI(row, { ...row.dataset, editing_by: userId, editing_at: nowISOString });
     });
+}
+
+// cleanup expired locks visually
+export function startLockCleanup() {
+    setInterval(() => {
+        document.querySelectorAll("#stockTable tr").forEach(row => {
+            if (row.querySelector("th")) return;
+            const data = { editing_by: row.dataset.editingBy, editing_at: row.dataset.editingAt };
+            updateRowUI(row, data);
+        });
+    }, 5000); // every 5 seconds
 }
