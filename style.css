@@ -59,8 +59,18 @@ tr:hover {
 
 /* ===== Mobile tweaks ===== */
 @media (max-width: 600px) {
+  table {
+    min-width: unset;
+  }
+
   th, td {
-    padding: 8px;
-    font-size: 14px;
+    padding: 6px;
+    font-size: 13px;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  td:first-child, th:first-child {
+    max-width: 150px;
   }
 }
