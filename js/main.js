@@ -8,7 +8,7 @@ async function init() {
     const items = await API.getItems();
     UI.print(items);
     UI.attachRowHighlight(API.supabase, USER_ID);
-
+    UI.startLockCleanup();
     // subscribe to changes
     API.supabase
         .channel("public:testHouse")
