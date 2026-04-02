@@ -1,15 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const supabase = createClient(
-  "https://ywfoqrrssuzyluppunov.supabase.co",
-  "sb_publishable_esATBUBHKZlatDp4zmnYGA_S1uF8i53"
-);
+// Replace with your Supabase URL and anon/public key
+const SUPABASE_URL = "https://ywfoqrrssuzyluppunov.supabase.co";
+const SUPABASE_KEY = "sb_publishable_esATBUBHKZlatDp4zmnYGA_S1uF8i53";
 
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// fetch all items
 export async function getItems() {
-  const { data, error } = await supabase
-    .from("testHouse")
-    .select("*");
-
-  if (error) console.error(error);
-  return data;
+    const { data, error } = await supabase.from("testHouse").select("*");
+    if (error) console.error(error);
+    return data;
 }

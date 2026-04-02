@@ -9,14 +9,17 @@ body {
 .table-container {
   width: 100%;
   overflow-x: auto; /* enables horizontal scroll on small screens */
+  -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
 }
 
 /* ===== Table ===== */
 table {
   width: 100%;
-  min-width: 500px; /* prevents columns from collapsing */
-  border-collapse: collapse; /* merges borders */
+  min-width: 500px; /* prevents columns from collapsing on desktop */
+  border-collapse: collapse;
   background-color: white;
+  border-radius: 6px;
+  overflow: hidden; /* rounds corners if needed */
 }
 
 /* ===== Header ===== */
@@ -26,12 +29,16 @@ th {
   text-align: left;
   padding: 10px;
   border: 1px solid #ccc;
+  position: sticky;  /* keeps header visible when scrolling horizontally */
+  top: 0;
+  z-index: 1;
 }
 
 /* ===== Cells ===== */
 td {
   padding: 10px;
   border: 1px solid #ccc;
+  vertical-align: middle;
 }
 
 /* ===== Row styles ===== */
@@ -51,26 +58,38 @@ tr:hover {
   color: white;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 12px;
 }
 
 .table-btn:hover {
   background-color: #2980b9;
 }
 
+/* ===== Locked / Editing row ===== */
+tr.editing {
+  background-color: #fffa9e !important; /* yellow highlight */
+  cursor: not-allowed;
+}
+
 /* ===== Mobile tweaks ===== */
 @media (max-width: 600px) {
   table {
     min-width: unset;
+    font-size: 13px;
   }
 
   th, td {
     padding: 6px;
-    font-size: 13px;
     white-space: normal;
     word-break: break-word;
   }
 
   td:first-child, th:first-child {
-    max-width: 150px;
+    max-width: 150px; /* keeps product name readable */
+  }
+
+  /* optional horizontal scroll hint */
+  .table-container::-webkit-scrollbar {
+    height: 6px;
   }
 }
