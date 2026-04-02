@@ -101,12 +101,26 @@ export function attachRowHighlight(supabase, userId) {
 }
 
 // cleanup expired locks visually
-export function startLockCleanup() {
+export function startLockCleanup(items) {
     setInterval(() => {
+        const now = Date.now();
         document.querySelectorAll("#stockTable tr").forEach(row => {
             if (row.querySelector("th")) return;
-            const data = { editing_by: row.dataset.editingBy, editing_at: row.dataset.editingAt };
-            updateRowUI(row, data);
+
+            // find the matching item by ID
+            const id = parseInt(row.id.split("-")[1]);
+            const item = items.find(it => it.id === id);
+            if (!item) return;
+
+            const timestamp = item.editing_at ? new Date(item.editing_at).getTime() : 0;
+            const isExpired = now - timestamp > LOCK_TIMEOUT;
+
+            const updatedItem = {
+                ...item,
+                editing_by: (isExpired ? null : item.editing_by)
+            };
+
+            updateRowUI(row, updatedItem);
         });
-    }, 5000); // every 5 seconds
+    }, 5000);
 }

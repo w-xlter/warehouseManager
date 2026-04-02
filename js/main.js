@@ -5,6 +5,7 @@ const USER_ID = "user_" + Math.floor(Math.random() * 1000);
 
 async function init() {
     const items = await API.getItems();
+    console.log("Items:", items);
     UI.print(items);
     UI.attachRowHighlight(API.supabase, USER_ID);
     UI.startLockCleanup();
