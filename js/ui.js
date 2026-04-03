@@ -1,291 +1,119 @@
-import * as API from "./api.js";
+import * as API from "./api.js"
 
-/**
- * Lock timeout in milliseconds.
- * After this duration, a row is considered "stale" and can be edited by others.
- * 3 minutes = 180,000 ms
- */
-const LOCK_TIMEOUT = 3 * 60 * 1000;
+/*
+renders a teable of items inside "stockTable"
 
-/**
- * Renders the entire table from a list of items.
- *
- * This is a full re-render:
- * - Clears previous DOM content
- * - Recreates table structure
- * - Delegates row rendering to updateRowUI()
- *
- * @param {Array} items - Array of objects from Supabase (id, product, qty, editing_by, editing_at)
- */
-export function print(items) {
+- Takes an array of items as an imout
+- updates the DOM
+*/
+export function render(items){
+    //get the table
     const anchor = document.getElementById("stockTable");
-
-    // Clear previous table (important to avoid duplicate tables)
+    //clear current content
     anchor.innerHTML = "";
 
     const table = document.createElement("table");
 
-    /**
-     * TABLE HEADER CREATION
-     * Static structure: defines columns.
-     */
-    const header = document.createElement("tr");
-
-    const th1 = document.createElement("th");
-    th1.textContent = "Product";
-
-    const th2 = document.createElement("th");
-    th2.textContent = "Qty";
-
-    header.appendChild(th1);
-    header.appendChild(th2);
-    table.appendChild(header);
-
-    /**
-     * ROW RENDERING
-     * Each item is mapped to a <tr>.
-     * updateRowUI handles both:
-     * - content (product, qty)
-     * - state (editing / not editing)
-     */
     items.forEach(item => {
         const row = document.createElement("tr");
-
-        // Row ID is critical for:
-        // - mapping realtime updates
-        // - identifying rows in click handlers
         row.id = `row-${item.id}`;
+        const name = document.createElement("td");
+        name.textContent = item.product;
 
-        updateRowUI(row, item);
-        table.appendChild(row);
+        const quantity = document.createElement("td")
+        quantity.textContent = item.qty;
+
+        row.appendChild(name);
+        row.appendChild(quantity)
+        table.appendChild(row)
     });
-
-    anchor.appendChild(table);
+    anchor.appendChild(table)
 }
 
-/**
- * Core UI update function (single source of truth for row state).
- *
- * Responsibilities:
- * - Determine if a lock is expired
- * - Apply visual state (yellow highlight)
- * - Store metadata in dataset
- * - Ensure table cells are populated correctly
- *
- * IMPORTANT:
- * This function must always receive FULL data (product, qty, editing_by, editing_at).
- * Passing partial data (e.g. only dataset) will erase cell content.
- *
- * @param {HTMLTableRowElement} row
- * @param {Object} data
- */
-export function updateRowUI(row, data) {
-    const now = Date.now();
+//function that handles changes sent by the DB
+export function handlePayload(payload){
 
-    /**
-     * Convert editing timestamp to milliseconds.
-     * If null, treat as 0 (never locked).
-     */
-    const timestamp = data.editing_at
-        ? new Date(data.editing_at).getTime()
-        : 0;
+    const currentContainer = document.getElementById("stockTable");
+    const currentTable = currentContainer.querySelector("table");
 
-    /**
-     * A lock is expired if:
-     * current time - last update time > timeout
-     */
-    const isExpired = now - timestamp > LOCK_TIMEOUT;
+    if (!currentTable) {
+        console.log("no table found?", currentTable, currentContainer)
+        return
+    }
+    const {eventType, new: newRow, old } = payload 
+    console.log("payload: ", eventType, newRow, old)
+    const rowId = newRow?.id || old?.id
+    const existingRow = document.getElementById(`row-${rowId}`)
 
-    /**
-     * Store state in DOM dataset for quick access (no DB call needed).
-     * dataset values are ALWAYS strings.
-     */
-    row.dataset.editingBy =
-        (!isExpired && data.editing_by) ? data.editing_by : "";
+    if (eventType === "INSERT") {
+        //then add to table
+        const row = document.createElement("tr");
+        row.id = `row-${newRow.id}`;
+        const name = document.createElement("td");
+        name.textContent = newRow.product;
 
-    row.dataset.editingAt = data.editing_at || "";
-
-    /**
-     * VISUAL STATE
-     * Apply/remove "editing" class based on lock validity.
-     */
-    if (data.editing_by && !isExpired) {
-        row.classList.add("editing");
-    } else {
-        row.classList.remove("editing");
+        const quantity = document.createElement("td")
+        quantity.textContent = newRow.qty;
+        row.appendChild(name);
+        row.appendChild(quantity)
+        currentTable.appendChild(row)
     }
 
-    /**
-     * CELL MANAGEMENT
-     *
-     * Two scenarios:
-     * 1. First render → create cells
-     * 2. Subsequent updates → update existing cells
-     *
-     * This prevents DOM duplication and ensures consistent structure.
-     */
-    if (!row.cells.length) {
-        const product = document.createElement("td");
-        product.textContent = data.product;
-
-        const qty = document.createElement("td");
-        qty.textContent = data.qty;
-
-        row.appendChild(product);
-        row.appendChild(qty);
-    } else {
-        row.cells[0].textContent = data.product;
-        row.cells[1].textContent = data.qty;
-    }
-}
-
-/**
- * Attaches click handling using EVENT DELEGATION.
- *
- * Why delegation:
- * - Rows are dynamically created/replaced
- * - Avoids re-attaching listeners after every render
- *
- * Behavior:
- * - Click → lock row
- * - Click again (same user) → unlock
- * - Prevent editing if locked by another user (unless expired)
- *
- * @param {SupabaseClient} supabase
- * @param {string} userId
- */
-export function attachRowHighlight(supabase, userId) {
-    const container = document.getElementById("stockTable");
-
-    container.addEventListener("click", async e => {
-        /**
-         * Find closest row from click target.
-         * Handles clicks on <td> or nested elements.
-         */
-        const row = e.target.closest("tr");
-
-        // Ignore clicks outside rows or on header
-        if (!row || row.querySelector("th")) return;
-
-        const rowId = row.id.split("-")[1];
-
-        /**
-         * Recompute expiration dynamically (never trust cached values)
-         */
-        const now = Date.now();
-        const timestamp = row.dataset.editingAt
-            ? new Date(row.dataset.editingAt).getTime()
-            : 0;
-
-        const isExpired = now - timestamp > LOCK_TIMEOUT;
-
-        /**
-         * BLOCK CONDITION:
-         * Another user owns the lock AND it is still valid.
-         */
-        if (
-            row.dataset.editingBy &&
-            row.dataset.editingBy !== userId &&
-            !isExpired
-        ) return;
-
-        /**
-         * UNLOCK CASE:
-         * Same user clicks the same row again.
-         */
-        if (row.dataset.editingBy === userId) {
-            await supabase
-                .from("testHouse")
-                .update({ editing_by: null, editing_at: null })
-                .eq("id", rowId);
-
-            // ⚠️ NOTE:
-            // This is a simplified local update.
-            // It lacks product/qty → can cause empty cells if misused.
-            updateRowUI(row, {
-                ...row.dataset,
-                editing_by: null,
-                editing_at: null
-            });
-
-            return;
+    else if (eventType === "UPDATE") {
+        if (existingRow){
+            existingRow.cells[0].textContent = newRow.product;
+            existingRow.cells[1].textContent = newRow.qty
         }
-
-        /**
-         * STEP 1: Unlock any rows previously owned by this user
-         */
-        await supabase
-            .from("testHouse")
-            .update({ editing_by: null, editing_at: null })
-            .eq("editing_by", userId);
-
-        /**
-         * STEP 2: Lock current row
-         */
-        const nowISOString = new Date().toISOString();
-
-        await supabase
-            .from("testHouse")
-            .update({
-                editing_by: userId,
-                editing_at: nowISOString
-            })
-            .eq("id", rowId);
-
-        /**
-         * OPTIMISTIC UI UPDATE
-         * Immediate feedback before realtime sync arrives.
-         */
-        updateRowUI(row, {
-            ...row.dataset,
-            editing_by: userId,
-            editing_at: nowISOString
-        });
-    });
+    }
+    else if (eventType == "DELETE"){
+        if (existingRow) {
+            existingRow.remove()
+        }
+    }
 }
 
-/**
- * Periodic cleanup of expired locks (UI-only).
- *
- * Important:
- * - Does NOT modify database
- * - Only updates visual state
- * - Prevents "stuck" yellow rows
- *
- * Runs every 5 seconds.
- *
- * @param {Array} items - original dataset used for rendering
- */
-export function startLockCleanup(items) {
-    setInterval(() => {
-        const now = Date.now();
+//code that enable quantity changes
 
-        document.querySelectorAll("#stockTable tr").forEach(row => {
-            // Skip header row
-            if (row.querySelector("th")) return;
+const tableContainer = document.getElementById("stockTable")
 
-            /**
-             * Extract row ID and find corresponding item
-             */
-            const id = parseInt(row.id.split("-")[1]);
-            const item = items.find(it => it.id === id);
-            if (!item) return;
+tableContainer.addEventListener("click", async (e) => {
+    const cell = e.target;
+    const row = cell.closest("tr");
 
-            const timestamp = item.editing_at
-                ? new Date(item.editing_at).getTime()
-                : 0;
+    //ignore possible header row or non quantity cells
+    if (!row || cell.cellIndex !==1){
+        console.log("invalid cell");
+        return
+    }
+    //make cell editable
+    const oldValue = cell.textContent;
+    const input = document.createElement("input");
+    input.type = "number"
+    input.value = oldValue;
+    input.style.width = "80%"
+    cell.textContent = ""
+    cell.appendChild(input)
+    input.focus()
 
-            const isExpired = now - timestamp > LOCK_TIMEOUT;
-
-            /**
-             * If expired → treat as unlocked (UI only)
-             */
-            const updatedItem = {
-                ...item,
-                editing_by: (isExpired ? null : item.editing_by)
-            };
-
-            updateRowUI(row, updatedItem);
-        });
-    }, 5000);
-}
+    //listener for when user finishes editing
+    input.addEventListener("blur", async () => {
+        const newValue = parseInt(input.value);
+        if (!isNaN(newValue) && newValue !== parseInt(oldValue)){
+            cell.textContent = newValue;
+            await API.supabase
+            .from("testHouse")
+            .update({qty: parseInt(newValue)})
+            .eq("id", parseInt(row.id.replace("row-", "")));
+        } else {
+            cell.textContent = oldValue;
+        }
+    })
+    input.addEventListener("keydown", async (event) => {
+        if (event.key === "Enter"){
+            input.blur();
+        }
+        if (event.key === "Escape"){
+            cell.textContent = oldValue;
+        }
+    })
+} )

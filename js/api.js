@@ -9,6 +9,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // fetch all items
 export async function getItems() {
     const { data, error } = await supabase.from("testHouse").select("*");
-    if (error) console.error(error);
+    if (error) {
+        console.error(error);
+        return [];
+    }
     return data;
 }
