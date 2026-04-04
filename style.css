@@ -50,7 +50,7 @@ tr:hover {
   background-color: #eef2f5;
 }
 
-/* ===== Buttons (future-proof) ===== */
+/* ===== Buttons  ===== */
 .table-btn {
   padding: 5px 10px;
   border: 1px solid #3498db;
@@ -108,4 +108,104 @@ td div {
   justify-content: center;
   align-items: center;
   gap: 8px;
+}
+
+
+/* ===== modal ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  animation: fadeIn 0.2s ease;
+}
+
+/* row layout */
+.modal-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-row label {
+  font-size: 14px;
+  color: #444;
+  min-width: 100px;
+}
+
+.modal-row input {
+  flex: 1;
+  padding: 8px;
+  font-size: 14px;
+
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+}
+
+.modal-row input:focus {
+  border-color: #3498db;
+}
+
+/* buttons */
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.modal-btn.confirm {
+  background-color: #3498db;
+  color: white;
+}
+
+.modal-btn.cancel {
+  background-color: #e0e0e0;
+}
+
+.modal-btn:hover {
+  opacity: 0.9;
+}
+
+@keyframes fadeIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

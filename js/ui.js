@@ -134,8 +134,13 @@ tableContainer.addEventListener("click", async (e) => {
 async function additionAndSubtraction (e, cell, row){
     const oldValue = parseInt(cell.querySelector("span").textContent);
     const isPlus = e.target.textContent === "+";
+    const amount = await openModal({
+    title: isPlus
+    ? `${oldValue} +`
+    : `${oldValue} - `,
+    placeholder: "",
+    });
 
-    const amount = await openQuantityPopup();
     if (amount === null || isNaN(amount)) return;
 
     const newValue = isPlus ? oldValue + amount : oldValue - amount;
@@ -148,40 +153,6 @@ async function additionAndSubtraction (e, cell, row){
 
 }
 
-
-function openQuantityPopup(){
-    return new Promise((resolve)=> {
-        const popup = document.createElement("div");
-        popup.className = "qty-popup";
-        
-        const input = document.createElement("input");
-        input.type = "number";
-
-        const ok = document.createElement("button");
-        ok.textContent = "✔"
-        
-        const cancel = document.createElement("button");
-        cancel.textContent = "✖"
-
-        popup.appendChild(input);
-        popup.appendChild(cancel);
-        popup.appendChild(ok);
-        document.body.appendChild(popup);
-
-        input.focus();
-
-        ok.onclick = () => {
-            const value = parseInt(input.value);
-            popup.remove();
-            resolve(value);
-        };
-
-        cancel.onclick = () => {
-            popup.remove();
-            resolve(null);
-        };
-    })
-}
 //function to create a wrapped div in the quantity cell of the table.
 function createQuantityCell(quantity){
     const quantityContainer = document.createElement("div");
@@ -209,4 +180,73 @@ function createQuantityCell(quantity){
     return quantityContainer;
 }
 
+//function that handles the modal to change values in the table
+export function openModal({ title, placeholder = "", initialValue = "" }) {
+    return new Promise((resolve) => {
+        // overlay
+        const overlay = document.createElement("div");
+        overlay.className = "modal-overlay";
 
+        // modal box
+        const modal = document.createElement("div");
+        modal.className = "modal";
+
+        // 🔥 NEW: row container (label + input)
+        const row = document.createElement("div");
+        row.className = "modal-row";
+
+        const label = document.createElement("label");
+        label.textContent = title;
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.placeholder = placeholder;
+        input.value = initialValue;
+
+        row.appendChild(label);
+        row.appendChild(input);
+
+        // buttons
+        const actions = document.createElement("div");
+        actions.className = "modal-actions";
+
+        const cancel = document.createElement("button");
+        cancel.textContent = "Cancel";
+        cancel.className = "modal-btn cancel";
+
+        const confirm = document.createElement("button");
+        confirm.textContent = "Confirm";
+        confirm.className = "modal-btn confirm";
+
+        actions.appendChild(cancel);
+        actions.appendChild(confirm);
+
+        modal.appendChild(row);
+        modal.appendChild(actions);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        input.focus();
+
+        function close(value) {
+            overlay.remove();
+            resolve(value);
+        }
+
+        confirm.onclick = () => {
+            const value = parseInt(input.value);
+            close(isNaN(value) ? null : value);
+        };
+
+        cancel.onclick = () => close(null);
+
+        overlay.onclick = (e) => {
+            if (e.target === overlay) close(null);
+        };
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") confirm.click();
+            if (e.key === "Escape") close(null);
+        });
+    });
+}
