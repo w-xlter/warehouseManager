@@ -169,12 +169,12 @@ td div {
   display: flex;        /* enable flex inside the label */
   align-items: center;  /* vertical center */
   justify-content: center; /* optional: horizontal center */
-  height: 38px;         /* same as input/button height for perfect alignment */
+  height: 38px;   
 }
 
 .modal-row input {
   width: 100%;
-        /* match the width of buttons */
+  max-width: 140px;       /* match the width of buttons */
   height: 38px;           /* same as buttons */
   padding: 0 12px;
   font-size: 15px;
@@ -242,24 +242,3 @@ td div {
 }
 
 /* mobile tweaks */
-@media (max-width: 500px) {
-  .modal-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .modal-row label {
-    width: 100%;
-    text-align: center;
-    margin-bottom: 6px;
-  }
-
-  .modal-row input {
-    width: 100%;
-    height: 38px; /* keep same height as buttons */
-  }
-
-  .modal {
-    padding: 18px;
-  }
-}
