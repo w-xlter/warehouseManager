@@ -160,7 +160,7 @@ td div {
 }
 
 .modal-row input {
-  flex: 1;
+  flex: 0 0 100px;
   min-width: 0;
   padding: 8px;
   font-size: 14px;
@@ -211,16 +211,5 @@ td div {
   to {
     transform: scale(1);
     opacity: 1;
-  }
-}
-
-@media (max-width: 500px) {
-  .modal-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .modal-row label {
-    min-width: unset;
   }
 }
