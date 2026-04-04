@@ -10,7 +10,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   } else {
     console.log("Logged in as", session.user.email);
   }
+  document.getElementById("signup").addEventListener("click", async () => {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
+    try {
+      const { user } = await AUTH.signUp(email, password);
+      if (user) {
+        alert("Account created! Logged in as " + user.email);
+        // optionally hide auth form and show table
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  });
   // Login
   document.getElementById("login").addEventListener("click", async () => {
     const email = document.getElementById("email").value;
@@ -37,6 +50,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   API.supabase.channel("public:testHouse")
     .on("postgres_changes", { event: "*", schema: "public", table: "testHouse" }, UI.handlePayload)
     .subscribe();
+  const status = document.getElementById("status");
+if (session) {
+  status.textContent = "Logged in as " + session.user.email;
+} else {
+  status.textContent = "Not logged in";
+}
 });
 
 async function loadAndRender() {
