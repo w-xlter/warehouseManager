@@ -191,7 +191,7 @@ export function openModal({ title, placeholder = "", initialValue = "" }) {
         const modal = document.createElement("div");
         modal.className = "modal";
 
-        // 🔥 NEW: row container (label + input)
+        // row container (label + input)
         const row = document.createElement("div");
         row.className = "modal-row";
 
@@ -211,11 +211,11 @@ export function openModal({ title, placeholder = "", initialValue = "" }) {
         actions.className = "modal-actions";
 
         const cancel = document.createElement("button");
-        cancel.textContent = "Cancel";
+        cancel.textContent = "annulla";
         cancel.className = "modal-btn cancel";
 
         const confirm = document.createElement("button");
-        confirm.textContent = "Confirm";
+        confirm.textContent = "conferma";
         confirm.className = "modal-btn confirm";
 
         actions.appendChild(cancel);
