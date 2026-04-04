@@ -120,7 +120,7 @@ td div {
   height: 100%;
 
   background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(5px);
 
   display: flex;
   align-items: flex-start;
@@ -131,19 +131,20 @@ td div {
 }
 
 .modal {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  width: 320px;
+  max-width: 90vw;
+  box-sizing: border-box;
 
-  width: 300px;
-  max-width: 90vw; /* prevents overflow on mobile */
-  box-sizing: border-box; /* includes padding in width */
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  animation: fadeIn 0.2s ease;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+  animation: fadeIn 0.25s ease;
+  transition: transform 0.25s ease;
 }
 
 /* row layout */
@@ -151,66 +152,105 @@ td div {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
 .modal-row label {
-  font-size: 14px;
-  color: #444;
-  min-width: 80px;
-  flex-shrink: 0;  
+  font-size: 15px;
+  color: #222;
+  width: 90px;
+  flex-shrink: 0;
+  text-align: center;
+  font-weight: 700;
 }
 
 .modal-row input {
-  flex: 1;
-  min-width: 0;
-  padding: 8px;
-  font-size: 14px;
-
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  border-radius: 10px;
   outline: none;
+  text-align: center;
+  min-height: 38px;
+
+  /* modern shadow for input */
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .modal-row input:focus {
   border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
 }
 
 /* buttons */
 .modal-actions {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
 }
 
 .modal-btn {
   flex: 1;
-  padding: 8px;
+  padding: 10px 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .modal-btn.confirm {
-  background-color: #3498db;
-  color: white;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: #fff;
+  box-shadow: 0 6px 12px rgba(52,152,219,0.3);
 }
 
 .modal-btn.cancel {
-  background-color: #e0e0e0;
+  background: #f0f0f0;
+  color: #555;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
 }
 
 .modal-btn:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  opacity: 0.95;
 }
 
+/* fade-in animation */
 @keyframes fadeIn {
   from {
-    transform: scale(0.95);
+    transform: scale(0.97);
     opacity: 0;
   }
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+/* mobile tweaks */
+@media (max-width: 500px) {
+  .modal-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-row label {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 6px;
+  }
+
+  .modal-row input {
+    width: 100%;
+  }
+
+  .modal {
+    padding: 18px;
   }
 }
