@@ -123,10 +123,11 @@ td div {
   backdrop-filter: blur(3px);
 
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 
   z-index: 1000;
+  padding-top: 30vh;
 }
 
 .modal {
