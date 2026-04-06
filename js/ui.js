@@ -147,7 +147,7 @@ async function additionAndSubtraction (e, cell, row){
 
     // update DB
     await API.supabase
-        .from("testhouse")
+        .from("testouse")
         .update({ qty: newValue })
         .eq("id", parseInt(row.id.replace("row-", "")));
 

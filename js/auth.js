@@ -4,7 +4,7 @@ const SUPABASE_URL = "https://ywfoqrrssuzyluppunov.supabase.co";
 const SUPABASE_KEY = "sb_publishable_esATBUBHKZlatDp4zmnYGA_S1uF8i53";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
+window.supabase = supabase;
 export async function signUp(email, password) {
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) throw error;
@@ -22,7 +22,8 @@ export async function signOut() {
   if (error) throw error;
 }
 
-export function getSession() {
+export async function getSession() {
+  console.log("getting session: ", await supabase.auth.getSession())
   return supabase.auth.getSession();
 }
 

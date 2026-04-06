@@ -1,20 +1,37 @@
-import { supabase } from "./auth.js";
+import * as AUTH from "./auth.js";
 
-export {supabase};
-
-// fetch all items
 export async function getItems() {
-  const { data: sessionData } = await supabase.auth.getSession();
-  console.log("Supabase auth session resolved:", sessionData?.session?.user?.id);
+  try {
+    // 1️⃣ Get current session
+    const { data: sessionData, error: sessionError } = await AUTH.getSession();
+    if (sessionError) console.error("Session error:", sessionError);
 
-  const { data, error } = await supabase
-    .from("testhouse")
-    .select("*");
+    console.log("DEBUG SESSION OBJECT:", sessionData);
+    const session = sessionData?.session;
 
-  console.log("data func:", data, error);
-  if (error) {
-    console.error(error);
+    if (!session) {
+      console.warn("No active session found!");
+      return [];
+    }
+
+    console.log("DEBUG USER ID:", session.user.id);
+    console.log("DEBUG ACCESS TOKEN:", session.access_token);
+
+    // 2️⃣ Fetch rows from testhouse
+    const { data, error } = await AUTH.supabase
+      .from("testhouse")
+      .select("*");
+
+    if (error) {
+      console.error("Fetch error:", error);
+      return [];
+    }
+
+    console.log("Fetched items (should respect RLS):", data);
+    return data;
+
+  } catch (err) {
+    console.error("Unexpected error in getItems():", err);
     return [];
   }
-  return data;
 }
