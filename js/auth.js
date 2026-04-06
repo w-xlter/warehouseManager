@@ -29,3 +29,4 @@ export function getSession() {
 export function onAuthChange(callback) {
   supabase.auth.onAuthStateChange(callback);
 }
+

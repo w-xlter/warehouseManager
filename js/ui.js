@@ -7,6 +7,7 @@ renders a teable of items inside "stockTable"
 - updates the DOM
 */
 export function render(items){
+    console.log("trying to render the table...", items)
     //get the table
     const anchor = document.getElementById("stockTable");
     //clear current content
@@ -27,12 +28,12 @@ export function render(items){
         row.appendChild(quantity)
         table.appendChild(row)
     });
+    console.log("look at my child: ", table)
     anchor.appendChild(table)
 }
 
 //function that handles changes sent by the DB
 export function handlePayload(payload){
-
     const currentContainer = document.getElementById("stockTable");
     const currentTable = currentContainer.querySelector("table");
 
@@ -41,7 +42,6 @@ export function handlePayload(payload){
         return
     }
     const {eventType, new: newRow, old } = payload 
-    console.log("payload: ", eventType, newRow, old)
     const rowId = newRow?.id || old?.id
     const existingRow = document.getElementById(`row-${rowId}`)
 
@@ -111,7 +111,7 @@ tableContainer.addEventListener("click", async (e) => {
             cell.innerHTML = "";
             cell.appendChild(createQuantityCell(newValue));
             await API.supabase
-            .from("testHouse")
+            .from("testhouse")
             .update({qty: parseInt(newValue)})
             .eq("id", parseInt(row.id.replace("row-", "")));
         } else {
@@ -147,7 +147,7 @@ async function additionAndSubtraction (e, cell, row){
 
     // update DB
     await API.supabase
-        .from("testHouse")
+        .from("testhouse")
         .update({ qty: newValue })
         .eq("id", parseInt(row.id.replace("row-", "")));
 
@@ -249,4 +249,16 @@ export function openModal({ title, placeholder = "", initialValue = "" }) {
             if (e.key === "Escape") close(null);
         });
     });
+}
+
+
+//handles AUTH changes
+export function updateAuthUI(session) {
+  const status = document.getElementById("status");
+
+  if (session) {
+    status.textContent = "Logged in as " + session.user.email;
+  } else {
+    status.textContent = "Not logged in";
+  }
 }
