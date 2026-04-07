@@ -82,6 +82,7 @@ const tableContainer = document.getElementById("stockTable");
 //handles direct clicks on quantity
 tableContainer.addEventListener("click", async (e) => {
     console.log(e)
+    console.log("GETTING EDITED");
     const cell = e.target.closest("td");
     const row = cell.closest("tr");
 
@@ -110,11 +111,14 @@ tableContainer.addEventListener("click", async (e) => {
         if (!isNaN(newValue) && newValue !== parseInt(oldValue)){
             cell.innerHTML = "";
             cell.appendChild(createQuantityCell(newValue));
-            await API.supabase
-            .from("testhouse")
-            .update({qty: parseInt(newValue)})
-            .eq("id", parseInt(row.id.replace("row-", "")));
+            const result = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), {qty: parseInt(newValue)})
+            if (!result){
+                console.log("db change failed, rolling back", result)
+                cell.innerHTML = "";
+                cell.appendChild(createQuantityCell(oldValue));
+            }
         } else {
+            console.log("invalid value")
             cell.innerHTML = "";
             cell.appendChild(createQuantityCell(oldValue))
         }
@@ -146,11 +150,15 @@ async function additionAndSubtraction (e, cell, row){
     const newValue = isPlus ? oldValue + amount : oldValue - amount;
 
     // update DB
-    await API.supabase
-        .from("testouse")
-        .update({ qty: newValue })
-        .eq("id", parseInt(row.id.replace("row-", "")));
-
+    console.log("optimistic update by AS")
+    cell.innerHTML = "";
+    cell.appendChild(createQuantityCell(newValue));
+    const result = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), { qty: newValue })
+    if (!result){
+        console.log("db change failed, rolling back", result)
+        cell.innerHTML = "";
+        cell.appendChild(createQuantityCell(newValue));
+    }
 }
 
 //function to create a wrapped div in the quantity cell of the table.

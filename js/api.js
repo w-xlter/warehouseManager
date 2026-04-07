@@ -2,7 +2,7 @@ import * as AUTH from "./auth.js";
 
 export async function getItems() {
   try {
-    // 1️⃣ Get current session
+    // Get current session
     const { data: sessionData, error: sessionError } = await AUTH.getSession();
     if (sessionError) console.error("Session error:", sessionError);
 
@@ -17,7 +17,7 @@ export async function getItems() {
     console.log("DEBUG USER ID:", session.user.id);
     console.log("DEBUG ACCESS TOKEN:", session.access_token);
 
-    // 2️⃣ Fetch rows from testhouse
+    // Fetch rows from testhouse
     const { data, error } = await AUTH.supabase
       .from("testhouse")
       .select("*");
@@ -27,11 +27,19 @@ export async function getItems() {
       return [];
     }
 
-    console.log("Fetched items (should respect RLS):", data);
+    console.log("Fetched items:", data);
     return data;
 
   } catch (err) {
     console.error("Unexpected error in getItems():", err);
     return [];
   }
+}
+
+export async function updateRowById(table, id, updates) {
+    console.log("trying to update table ", table, "with id ", id, ", update: ", updates);
+  return await supabase
+    .from(table)
+    .update(updates)
+    .eq("id", id);
 }
