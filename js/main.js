@@ -104,8 +104,6 @@ async function loadAndRender() {
   console.log("LNR Current session:", session);
   console.log("LNR Current user ID:", session.user.id);
 
-  // Optional: explicitly set session on Supabase client
-  // supabase.auth.setSession(session.access_token); // usually not needed if using the same client
 
   const items = await API.getItems();
   console.log("loadAndRender items:", items);

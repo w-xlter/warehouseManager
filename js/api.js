@@ -43,3 +43,13 @@ export async function updateRowById(table, id, updates) {
     .update(updates)
     .eq("id", id);
 }
+
+
+export async function insertRow(table, values) {
+    console.log(table, values)
+  return await supabase
+    .from(table)
+    .insert(values)
+    .select()
+    .single();
+}
