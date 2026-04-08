@@ -1,21 +1,22 @@
 import * as API from "./api.js"
 
-/*
-renders a teable of items inside "stockTable"
-
-- Takes an array of items as an imout
-- updates the DOM
-*/
+/** 
+ * Renders a table of items inside the "stockTable" element.
+ * 
+ * @param {Array} items - Array of item objects to render.
+ * @param {string} tableId - Optional table identifier (used for inline row submissions).
+ * Updates the DOM with both an inline row for new entries and the existing data rows.
+ */
 export function render(items, tableId) {
   const anchor = document.getElementById("stockTable");
-  anchor.innerHTML = "";
+  anchor.innerHTML = ""; // clear previous content
 
   const table = document.createElement("table");
 
-  // inline row
+  // Append an inline row for user input (add new item)
   table.appendChild(createRow(null, { isInline: true, tableId: "debee654-6588-4377-a8d5-1bc5c786fbc5" }));
 
-  // data rows
+  // Append each data row
   items.forEach(item => {
     console.log("creating rows", item)
     table.appendChild(createRow(item));
@@ -24,6 +25,15 @@ export function render(items, tableId) {
   anchor.appendChild(table);
 }
 
+/** 
+ * Creates a single table row element.
+ * Supports both display mode (existing data) and inline input mode (for adding new items).
+ * 
+ * @param {Object|null} data - Item data for display mode; null for inline row.
+ * @param {Object} options - Configuration options.
+ * @param {boolean} options.isInline - True if row is for inline input.
+ * @param {string} options.tableId - Table identifier for submitting new rows.
+ */
 function createRow(data, { isInline = false, tableId } = {}) {
     const row = document.createElement("tr");
 
@@ -31,138 +41,153 @@ function createRow(data, { isInline = false, tableId } = {}) {
     const qtyCell = document.createElement("td");
 
     if (isInline) {
-    // INPUT MODE
-    const productInput = document.createElement("input");
-    const qtyInput = document.createElement("input");
+        // INPUT MODE: row with input fields for adding a new item
+        const productInput = document.createElement("input");
+        const qtyInput = document.createElement("input");
+        
+        productInput.placeholder = "Product...";
+        qtyInput.placeholder = "Qty...";
+        qtyInput.type = "number";
+        row.dataset.type = "inline";
 
-    productInput.placeholder = "Product...";
-    qtyInput.placeholder = "Qty...";
-    qtyInput.type = "number";
+        nameCell.appendChild(productInput);
+        qtyCell.appendChild(qtyInput);
 
-    nameCell.appendChild(productInput);
-    qtyCell.appendChild(qtyInput);
+        // Handles submission when user presses Enter on quantity input
+        async function submit() {
+            const product = productInput.value.trim();
+            const qty = parseInt(qtyInput.value);
 
-    async function submit() {
-        const product = productInput.value.trim();
-        const qty = parseInt(qtyInput.value);
+            if (!product || isNaN(qty)) return; // ignore invalid input
 
-        if (!product || isNaN(qty)) return;
+            // Temporarily render the new row optimistically
+            const tempRow = createRow({ product, qty });
+            row.parentNode.insertBefore(tempRow, row.nextSibling);
 
-        const tempRow = createRow({ product, qty });
-        row.parentNode.insertBefore(tempRow, row.nextSibling);
+            // Clear input fields
+            productInput.value = "";
+            qtyInput.value = "";
+            productInput.focus();
 
-        productInput.value = "";
-        qtyInput.value = "";
-        productInput.focus();
-        console.log(product, qty)
-        const { data: real, error } = await API.insertRow("testhouse", {
-            product: product,
-            qty: qty,
-            table_id: tableId
-        });
+            console.log(product, qty);
 
-        if (error || !real) {
-            console.error("Insert failed", error, "data:",data);
-            tempRow.remove();
-        return;
+            // Persist new row via API
+            const { data: real, error } = await API.insertRow("testhouse", {
+                product: product,
+                qty: qty,
+                table_id: tableId
+            });
+
+            if (error || !real) {
+                console.error("Insert failed", error, "data:",data);
+                tempRow.remove();
+                return;
+            }
+
+            // Replace optimistic row with server-confirmed row
+            const realRow = createRow(real);
+            tempRow.replaceWith(realRow);
         }
 
-        const realRow = createRow(real);
-        tempRow.replaceWith(realRow);
+        // Navigate between input fields on Enter
+        productInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") qtyInput.focus();
+        });
+
+        qtyInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") submit();
+        });
+
+        productInput.focus();
+
+    } else {
+        // DISPLAY MODE: show existing data
+        row.id = `row-${data.id}`;
+        nameCell.textContent = data.product;
+        qtyCell.appendChild(createQuantityCell(data.qty));
     }
 
-    productInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") qtyInput.focus();
-    });
+    row.appendChild(nameCell);
+    row.appendChild(qtyCell);
 
-    qtyInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") submit();
-    });
-
-    productInput.focus();
-
-  } else {
-    // DISPLAY MODE
-    row.id = `row-${data.id}`;
-    nameCell.textContent = data.product;
-    qtyCell.appendChild(createQuantityCell(data.qty));
-  }
-
-  row.appendChild(nameCell);
-  row.appendChild(qtyCell);
-
-  return row;
+    return row;
 }
 
+// --- Quantity Editing & Increment/Decrement Handling ---
 
-//code that enable quantity changes
 const tableContainer = document.getElementById("stockTable");
 
-//handles direct clicks on quantity
+// Handles clicks inside the table to enable inline quantity editing or increment/decrement buttons
 tableContainer.addEventListener("click", async (e) => {
     console.log(e)
     console.log("GETTING EDITED");
     const cell = e.target.closest("td");
     const row = cell.closest("tr");
 
-    //ignore possible header row or non quantity cells
+    // Skip invalid cells (non-table data cells or header)
     if (!row || !cell || cell.cellIndex !==1){
         console.log("invalid cell", e, e.target);
-        return
+        return;
     }
+
+    // Handle plus/minus buttons
     if (e.target.classList.contains("qty-btn")) {
-    await additionAndSubtraction(e, cell, row)
-    return; // IMPORTANT
+        await additionAndSubtraction(e, cell, row);
+        return; // prevent further editing logic
     }
-    //make cell editable
+
+    // Convert cell into editable input field
     const oldValue = parseInt(cell.querySelector("span").innerText);
     const input = document.createElement("input");
-    input.type = "number"
+    input.type = "number";
     input.value = oldValue;
-    input.style.width = "80%"
-    cell.textContent = ""
-    cell.appendChild(input)
-    input.focus()
+    input.style.width = "80%";
+    cell.textContent = "";
+    cell.appendChild(input);
+    input.focus();
 
-    //listener for when user finishes editing
+    // Commit changes on blur
     input.addEventListener("blur", async () => {
         const newValue = parseInt(input.value);
-        if (!isNaN(newValue) && newValue !== parseInt(oldValue)){
+        if (!isNaN(newValue) && newValue !== oldValue){
+            // Optimistic update
             cell.innerHTML = "";
             cell.appendChild(createQuantityCell(newValue));
-            const { data, error } = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), {qty: parseInt(newValue)})
+            const { data, error } = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), {qty: newValue})
             if (error){
                 console.log("db change failed, rolling back", error)
                 cell.innerHTML = "";
                 cell.appendChild(createQuantityCell(oldValue));
             }
         } else {
-            console.log("invalid value")
+            // Invalid input, revert
+            console.log("invalid value");
             cell.innerHTML = "";
-            cell.appendChild(createQuantityCell(oldValue))
+            cell.appendChild(createQuantityCell(oldValue));
         }
-    })
+    });
+
+    // Commit or revert changes on Enter/Escape
     input.addEventListener("keydown", async (event) => {
         if (event.key === "Enter"){
             input.blur();
         }
         if (event.key === "Escape"){
             cell.innerHTML = "";
-            console.log(oldValue)
-            cell.appendChild(createQuantityCell(oldValue))
+            console.log(oldValue);
+            cell.appendChild(createQuantityCell(oldValue));
         }
-    })
-} )
+    });
+});
 
-
-//function to create a wrapped div in the quantity cell of the table.
+// Creates a div containing quantity with plus/minus buttons for consistent layout
 function createQuantityCell(quantity){
     const quantityContainer = document.createElement("div");
     quantityContainer.style.display = "flex";
     quantityContainer.style.alignItems = "center"; // vertical centering
     quantityContainer.style.justifyContent = "center"; // horizontal centering
     quantityContainer.style.gap = "8px";
-    quantityContainer.style.height = "100%"; // ensures div fills the td vertically
+    quantityContainer.style.height = "100%"; // ensures div fills td vertically
 
     const minusBtn = document.createElement("button");
     minusBtn.textContent = "-";
@@ -182,17 +207,19 @@ function createQuantityCell(quantity){
     return quantityContainer;
 }
 
+// --- Modal Utility for User Input ---
+
 export function openModal({ title, placeholder = "", initialValue = "" }) {
     return new Promise((resolve) => {
         // overlay
         const overlay = document.createElement("div");
         overlay.className = "modal-overlay";
 
-        // modal box
+        // modal container
         const modal = document.createElement("div");
         modal.className = "modal";
 
-        // row container (label + input)
+        // input row (label + input)
         const row = document.createElement("div");
         row.className = "modal-row";
 
@@ -207,7 +234,7 @@ export function openModal({ title, placeholder = "", initialValue = "" }) {
         row.appendChild(label);
         row.appendChild(input);
 
-        // buttons
+        // modal action buttons
         const actions = document.createElement("div");
         actions.className = "modal-actions";
 
@@ -234,11 +261,11 @@ export function openModal({ title, placeholder = "", initialValue = "" }) {
             resolve(value);
         }
 
+        // confirm or cancel actions
         confirm.onclick = () => {
             const value = parseInt(input.value);
             close(isNaN(value) ? null : value);
         };
-
         cancel.onclick = () => close(null);
 
         overlay.onclick = (e) => {
@@ -252,24 +279,26 @@ export function openModal({ title, placeholder = "", initialValue = "" }) {
     });
 }
 
+// Handles addition or subtraction via modal input triggered by plus/minus buttons
 async function additionAndSubtraction (e, cell, row){
     const oldValue = parseInt(cell.querySelector("span").textContent);
     const isPlus = e.target.textContent === "+";
+
     const amount = await openModal({
-    title: isPlus
-    ? `${oldValue} +`
-    : `${oldValue} - `,
-    placeholder: "",
+        title: isPlus ? `${oldValue} +` : `${oldValue} - `,
+        placeholder: "",
     });
 
     if (amount === null || isNaN(amount)) return;
 
     const newValue = isPlus ? oldValue + amount : oldValue - amount;
 
-    // update DB
+    // Optimistic UI update
     console.log("optimistic update by AS")
     cell.innerHTML = "";
     cell.appendChild(createQuantityCell(newValue));
+
+    // Persist change to DB
     const { data, error } = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), { qty: newValue })
     if (error){
         console.log("db change failed, rolling back", error)
@@ -278,7 +307,7 @@ async function additionAndSubtraction (e, cell, row){
     }
 }
 
-//handles AUTH changes
+// Updates the authentication UI to show current user status
 export function updateAuthUI(session) {
   const status = document.getElementById("status");
 
@@ -289,33 +318,31 @@ export function updateAuthUI(session) {
   }
 }
 
-//function that handles the modal to change values in the table
+// --- Payload Handling from Database / Backend ---
 
-
-//function that handles changes sent by the DB
 export function handlePayload(payload){
     const currentContainer = document.getElementById("stockTable");
     const currentTable = currentContainer.querySelector("table");
 
     if (!currentTable) {
         console.log("no table found?", currentTable, currentContainer)
-        return
+        return;
     }
+
     const {eventType, new: newRow, old } = payload 
     const rowId = newRow?.id || old?.id
     const existingRow = document.getElementById(`row-${rowId}`)
 
     if (eventType === "INSERT") {
-        //then add to table
+        // New row added
         if (existingRow){
             console.log("row updated optimistically, ignoring payload info");
-            return
+            return;
         }
         console.log("payload", payload.new)
         currentTable.appendChild(createRow(payload.new))
-    }
-
-    else if (eventType === "UPDATE") {
+    } else if (eventType === "UPDATE") {
+        // Existing row updated
         if (existingRow){
             existingRow.cells[0].textContent = newRow.product;
             const newDiv = createQuantityCell(newRow.qty);
@@ -324,15 +351,16 @@ export function handlePayload(payload){
             newCell.appendChild(newDiv)
             existingRow.replaceChild(newCell, existingRow.cells[1]);
         }
-    }
-    else if (eventType == "DELETE"){
+    } else if (eventType == "DELETE"){
+        // Remove row
         if (existingRow) {
             existingRow.remove()
         }
     }
 }
 
-//sidebar code
+// --- Sidebar Navigation Setup ---
+
 const menuBtn = document.getElementById("menu-btn");
 const sidebar = document.getElementById("sidebar");
 
@@ -340,30 +368,32 @@ menuBtn.addEventListener("click", () => {
     sidebar.classList.toggle("open");
 });
 document.addEventListener("click", (e) => {
-  if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
-    sidebar.classList.remove("open");
-  }
+    if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+        sidebar.classList.remove("open");
+    }
 });
 
+// Creates a menu section with buttons
 function createMenuSection(title, items) {
-  const section = document.createElement("div");
-  section.className = "menu-section";
+    const section = document.createElement("div");
+    section.className = "menu-section";
 
-  const header = document.createElement("h3");
-  header.textContent = title;
+    const header = document.createElement("h3");
+    header.textContent = title;
 
-  section.appendChild(header);
+    section.appendChild(header);
 
-  items.forEach(item => {
-    const btn = document.createElement("button");
-    btn.textContent = item.label;
-    btn.onclick = item.onClick;
-    section.appendChild(btn);
-  });
+    items.forEach(item => {
+        const btn = document.createElement("button");
+        btn.textContent = item.label;
+        btn.onclick = item.onClick;
+        section.appendChild(btn);
+    });
 
-  return section;
+    return section;
 }
 
+// Append sections to sidebar
 sidebar.appendChild(
   createMenuSection("General", [
     { label: "Dashboard", onClick: () => console.log("go dashboard") },
@@ -376,3 +406,88 @@ sidebar.appendChild(
     { label: "Users", onClick: () => console.log("manage users") }
   ])
 );
+
+// --- Modal for Editing Row Name / Deleting Row ---
+
+tableContainer.addEventListener("click", async (e) => {
+    const cell = e.target.closest("td");
+    const row = e.target.closest("tr");
+
+    if (!row || !cell) return;
+
+    // Skip inline row or non-name cells
+    if (row.dataset.type === "inline") return;
+    if (cell.cellIndex !== 0) return;
+    if (e.target.tagName === "BUTTON") return;
+
+    const rowId = parseInt(row.id.replace("row-", ""));
+    const currentName = cell.textContent;
+
+    openEditModal({ rowId, currentName, row });
+});
+
+function openEditModal({ rowId, currentName, row }) {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "modal";
+
+    const input = document.createElement("input");
+    input.value = currentName;
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Save";
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Delete";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+
+    modal.append(input, saveBtn, deleteBtn, cancelBtn);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    input.focus();
+
+    // Save handler
+    saveBtn.onclick = async () => {
+        const newName = input.value.trim();
+        if (!newName) return;
+
+        // Optimistic UI update
+        row.cells[0].textContent = newName;
+
+        const { error } = await API.updateRowById("testhouse", rowId, { product: newName });
+
+        if (error) {
+            console.log("update failed", error);
+            row.cells[0].textContent = currentName; // rollback
+        }
+
+        overlay.remove();
+    };
+
+    // Delete handler
+    deleteBtn.onclick = async () => {
+        row.remove(); // optimistic removal
+
+        const { error } = await API.deleteRowById("testhouse", rowId);
+
+        if (error){
+            console.log("delete failed", error);
+            document.querySelector("table").appendChild(row); // rollback
+        }
+
+        overlay.remove();
+    };
+
+    // Cancel handler
+    cancelBtn.onclick = () => overlay.remove();
+
+    // Close modal on overlay click
+    overlay.onclick = (e) => {
+        if (e.target === overlay) overlay.remove();
+    };
+}

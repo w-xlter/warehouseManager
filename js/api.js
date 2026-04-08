@@ -1,23 +1,25 @@
 import * as AUTH from "./auth.js";
 
+/**
+ * Fetch all items from the "testhouse" table.
+ * Ensures a valid authenticated session exists before querying.
+ * Returns an empty array on failure to keep UI stable.
+ */
 export async function getItems() {
   try {
-    // Get current session
+    // Retrieve current auth session
     const { data: sessionData, error: sessionError } = await AUTH.getSession();
     if (sessionError) console.error("Session error:", sessionError);
 
-    console.log("DEBUG SESSION OBJECT:", sessionData);
     const session = sessionData?.session;
 
+    // Guard: no session → no data access
     if (!session) {
-      console.warn("No active session found!");
+      console.warn("No active session found");
       return [];
     }
 
-    console.log("DEBUG USER ID:", session.user.id);
-    console.log("DEBUG ACCESS TOKEN:", session.access_token);
-
-    // Fetch rows from testhouse
+    // Fetch all rows (RLS will filter based on user permissions)
     const { data, error } = await AUTH.supabase
       .from("testhouse")
       .select("*");
@@ -27,29 +29,56 @@ export async function getItems() {
       return [];
     }
 
-    console.log("Fetched items:", data);
     return data;
 
   } catch (err) {
+    // Catch unexpected runtime errors (network, auth edge cases, etc.)
     console.error("Unexpected error in getItems():", err);
     return [];
   }
 }
 
+/**
+ * Update a single row by ID.
+ * @param {string} table - Table name
+ * @param {number} id - Row ID
+ * @param {object} updates - Fields to update
+ */
 export async function updateRowById(table, id, updates) {
-    console.log("trying to update table ", table, "with id ", id, ", update: ", updates);
-  return await supabase
+  console.log("Updating row:", { table, id, updates });
+
+  return await AUTH.supabase
     .from(table)
     .update(updates)
     .eq("id", id);
 }
 
-
+/**
+ * Insert a new row into a table.
+ * Uses `.single()` to return the inserted row as an object instead of an array.
+ * @param {string} table - Table name
+ * @param {object} values - Row data
+ */
 export async function insertRow(table, values) {
-    console.log(table, values)
-  return await supabase
+  console.log("Inserting row:", { table, values });
+
+  return await AUTH.supabase
     .from(table)
     .insert(values)
     .select()
     .single();
+}
+
+/**
+ * Delete a row by ID.
+ * @param {string} table - Table name
+ * @param {number} id - Row ID
+ */
+export async function deleteRowById(table, id) {
+  console.log("Deleting row:", { table, id });
+
+  return await AUTH.supabase
+    .from(table)
+    .delete()
+    .eq("id", id);
 }
