@@ -111,9 +111,9 @@ tableContainer.addEventListener("click", async (e) => {
         if (!isNaN(newValue) && newValue !== parseInt(oldValue)){
             cell.innerHTML = "";
             cell.appendChild(createQuantityCell(newValue));
-            const result = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), {qty: parseInt(newValue)})
-            if (!result){
-                console.log("db change failed, rolling back", result)
+            const { data, error } = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), {qty: parseInt(newValue)})
+            if (error){
+                console.log("db change failed, rolling back", error)
                 cell.innerHTML = "";
                 cell.appendChild(createQuantityCell(oldValue));
             }
@@ -153,11 +153,11 @@ async function additionAndSubtraction (e, cell, row){
     console.log("optimistic update by AS")
     cell.innerHTML = "";
     cell.appendChild(createQuantityCell(newValue));
-    const result = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), { qty: newValue })
-    if (!result){
-        console.log("db change failed, rolling back", result)
+    const { data, error } = await API.updateRowById("testhouse", parseInt(row.id.replace("row-", "")), { qty: newValue })
+    if (error){
+        console.log("db change failed, rolling back", error)
         cell.innerHTML = "";
-        cell.appendChild(createQuantityCell(newValue));
+        cell.appendChild(createQuantityCell(oldValue));
     }
 }
 
