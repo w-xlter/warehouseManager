@@ -251,7 +251,6 @@ td input:focus {
 
 /* ===== Sidebar ===== */
 #menu-btn {
-  position: fixed;
   top: 10px;
   left: 10px;
   z-index: 1001;
@@ -354,17 +353,16 @@ td input:focus {
   position: sticky;
 }
 
-/* LEFT + RIGHT zones */
+
 .topbar-left,
 .topbar-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 
-  min-width: 80px; /* prevents overlap with centered title */
+  min-width: 80px;
 }
 
-/* CENTER TITLE (true center, no layout shift) */
 .topbar-title {
   position: absolute;
   left: 50%;
@@ -374,7 +372,7 @@ td input:focus {
   font-size: 14px;
   color: #fafafa;
 
-  pointer-events: none; /* prevents blocking clicks */
+  pointer-events: none; 
 }
 
 .login-modal-btn{
