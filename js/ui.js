@@ -456,7 +456,7 @@ function openEditModal({ rowId, currentName, row }) {
     modalActions.appendChild(saveBtn);
     modalActions.appendChild(cancelBtn);
     modalActions.appendChild(deleteBtn);
-    
+
     modal.append(input, modalActions);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
