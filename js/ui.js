@@ -49,8 +49,10 @@ function createRow(data, { isInline = false, tableId } = {}) {
         qtyInput.placeholder = "Qty...";
         qtyInput.type = "number";
         row.dataset.type = "inline";
-
+        nameCell.className = "input";
+        qtyCell.className = "input";
         nameCell.appendChild(productInput);
+        
         qtyCell.appendChild(qtyInput);
 
         // Handles submission when user presses Enter on quantity input
@@ -437,15 +439,25 @@ function openEditModal({ rowId, currentName, row }) {
     input.value = currentName;
 
     const saveBtn = document.createElement("button");
+    saveBtn.className = "modal-btn confirm"
     saveBtn.textContent = "Save";
 
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "Delete";
+    deleteBtn.className = "modal-btn delete"
 
     const cancelBtn = document.createElement("button");
+    cancelBtn.className = "modal-btn cancel"
     cancelBtn.textContent = "Cancel";
+    
+    const modalActions = document.createElement("div");
+    modalActions.className = "modal-actions";
 
-    modal.append(input, saveBtn, deleteBtn, cancelBtn);
+    modalActions.appendChild(saveBtn);
+    modalActions.appendChild(cancelBtn);
+    modalActions.appendChild(deleteBtn);
+    
+    modal.append(input, modalActions);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
