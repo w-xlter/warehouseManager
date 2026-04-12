@@ -210,86 +210,224 @@ function createQuantityCell(quantity){
 }
 
 // --- Modal Utility for User Input ---
+/**
+ * Creates and opens a fully dynamic modal.
+ *
+ * DESIGN PRINCIPLE:
+ * - This modal is intentionally stupid
+ * - It does NOT manage layout or form logic
+ * - It only handles:
+ *    - rendering container
+ *    - mounting user-provided content
+ *    - actions (buttons)
+ *    - close lifecycle
+ *    - keyboard + overlay dismissal
+ *
+ * Everything inside the modal is fully controlled by the caller.
+ */
+export function openModal({
+    title = null,
+    content = null,          // HTMLElement | HTMLElement[] | string | null
+    actions = [],            // optional footer buttons
+    onKeydown = null,       // custom keyboard handler hook
+    closeOnOverlay = true,
+    closeOnEscape = true
+    } = {}) {
 
-export function openModal({ title, placeholder = "", initialValue = "" }) {
     return new Promise((resolve) => {
-        // overlay
+
+        // =========================================================
+        // 1. CREATE BASE STRUCTURE
+        // =========================================================
+
+        // Dark overlay behind modal (click-to-close surface)
         const overlay = document.createElement("div");
         overlay.className = "modal-overlay";
 
-        // modal container
+        // Main modal container
         const modal = document.createElement("div");
         modal.className = "modal";
 
-        // input row (label + input)
-        const row = document.createElement("div");
-        row.className = "modal-row";
+        // =========================================================
+        // 2. OPTIONAL TITLE
+        // =========================================================
+        // If provided, render a simple header element
+        if (title) {
+        const titleEl = document.createElement("h3");
+        titleEl.textContent = title;
+        modal.appendChild(titleEl);
+        }
 
-        const label = document.createElement("label");
-        label.textContent = title;
+        // =========================================================
+        // 3. CONTENT RENDERING (USER CONTROLLED)
+        // =========================================================
+        /**
+         * Content can be:
+         * - HTMLElement       -> appended directly
+         * - HTMLElement[]     -> appended in order
+         * - string            -> converted to <p>
+         */
+        if (Array.isArray(content)) {
+        content.forEach(el => el && modal.appendChild(el));
 
-        const input = document.createElement("input");
-        input.type = "number";
-        input.placeholder = placeholder;
-        input.value = initialValue;
+        } else if (content instanceof HTMLElement) {
+        modal.appendChild(content);
 
-        row.appendChild(label);
-        row.appendChild(input);
+        } else if (typeof content === "string") {
+        const p = document.createElement("p");
+        p.textContent = content;
+        modal.appendChild(p);
+        }
 
-        // modal action buttons
-        const actions = document.createElement("div");
-        actions.className = "modal-actions";
+        // =========================================================
+        // 4. ACTION FOOTER (BUTTONS)
+        // =========================================================
+        /**
+         * actions format:
+         * [
+         *   {
+         *     label: "Confirm",
+         *     className: "confirm",
+         *     onClick: () => value
+         *   }
+         * ]
+         */
+        if (actions.length) {
+        const actionsContainer = document.createElement("div");
+        actionsContainer.className = "modal-actions";
 
-        const cancel = document.createElement("button");
-        cancel.textContent = "annulla";
-        cancel.className = "modal-btn cancel";
+        actions.forEach(({ label, className = "", onClick }) => {
+            const btn = document.createElement("button");
+            btn.textContent = label;
+            btn.className = `modal-btn ${className}`;
 
-        const confirm = document.createElement("button");
-        confirm.textContent = "conferma";
-        confirm.className = "modal-btn confirm";
+            // Each button can optionally return a value
+            // If return !== false → modal closes
+            btn.onclick = async () => {
+            const result = await onClick?.();
+            if (result !== false) close(result);
+            };
 
-        actions.appendChild(cancel);
-        actions.appendChild(confirm);
+            actionsContainer.appendChild(btn);
+        });
 
-        modal.appendChild(row);
-        modal.appendChild(actions);
+        modal.appendChild(actionsContainer);
+        }
+
+        // Mount modal into DOM
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
-        input.focus();
-
+        // =========================================================
+        // 5. CLOSE HANDLER (SINGLE SOURCE OF TRUTH)
+        // =========================================================
         function close(value) {
-            overlay.remove();
-            resolve(value);
+        document.removeEventListener("keydown", onKey);
+        document.removeEventListener("keydown", handleKeydown);
+        overlay.remove();
+        resolve(value);
         }
 
-        // confirm or cancel actions
-        confirm.onclick = () => {
-            const value = parseInt(input.value);
-            close(isNaN(value) ? null : value);
-        };
-        cancel.onclick = () => close(null);
+        // =========================================================
+        // 6. KEYBOARD HANDLING (GLOBAL MODAL SHORTCUTS)
+        // =========================================================
+        /**
+         * Priority order:
+         * 1. custom onKeydown hook (user-defined logic)
+         * 2. Escape key default close behavior
+         */
+        function handleKeydown(e) {
 
+        // Allow user-defined keyboard logic
+        if (onKeydown) {
+            const result = onKeydown(e, { close });
+
+            // If handler returns false → block default behavior
+            if (result === false) return;
+        }
+
+        // Default Escape behavior
+        if (closeOnEscape && e.key === "Escape") {
+            close(null);
+        }
+        }
+
+        document.addEventListener("keydown", handleKeydown);
+
+        // =========================================================
+        // 7. OVERLAY CLICK TO CLOSE
+        // =========================================================
         overlay.onclick = (e) => {
-            if (e.target === overlay) close(null);
+        if (closeOnOverlay && e.target === overlay) {
+            close(null);
+        }
         };
 
-        input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") confirm.click();
-            if (e.key === "Escape") close(null);
-        });
+        // =========================================================
+        // 8. LEGACY ESCAPE HANDLER (REDUNDANT)
+        // =========================================================
+        /**
+         * NOTE:
+         * This duplicates Escape handling already in handleKeydown.
+         * It is kept intentionally bcz i don't really want to fuck around with this function anymore
+         */
+        function onKey(e) {
+        if (closeOnEscape && e.key === "Escape") {
+            close(null);
+        }
+        }
+
+        document.addEventListener("keydown", onKey);
     });
 }
+
+
 
 // Handles addition or subtraction via modal input triggered by plus/minus buttons
 async function additionAndSubtraction (e, cell, row){
     const oldValue = parseInt(cell.querySelector("span").textContent);
     const isPlus = e.target.textContent === "+";
 
+    const modalrow = document.createElement("div");
+    modalrow.className = "modal-row";
+
+    const label = document.createElement("label");
+    label.textContent = `${oldValue} +`;
+    
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "modal-input";
+
+    modalrow.append(label, input);
+
     const amount = await openModal({
-        title: isPlus ? `${oldValue} +` : `${oldValue} - `,
-        placeholder: "",
+        content: modalrow,
+        actions: [
+        {
+            label: "confirm",
+            className: "confirm",
+            onClick: () => {
+            const value = parseInt(input.value);
+            return isNaN(value) ? false : value;
+            }
+        },
+        {
+            label: "cancel",
+            className: "cancel",
+            onClick: () => null
+        }
+        ],
+         onKeydown: (e, { close }) => {
+            if (e.key === "Enter") {
+            const value = parseInt(input.value);
+            console.log("i hear ya"),
+            close(isNaN(value) ? null : value);
+            return false; // stop default handling
+            }
+        },
     });
+
 
     if (amount === null || isNaN(amount)) return;
 
