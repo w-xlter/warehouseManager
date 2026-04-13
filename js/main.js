@@ -1,14 +1,14 @@
 import * as AUTH from "./auth.js";
 import * as API from "./api.js";
 import * as UI from "./ui.js";
-
+import * as STATE from "./state.js"
 /*
  * Main entry point executed when DOM content is fully loaded.
  * Initializes authentication, sets up event listeners, fetches initial data,
  * and subscribes to real-time database changes.
  */
 
-let activeTableId = null;
+
 let currentChannel = null;
 document.addEventListener("DOMContentLoaded", async () => {
 
@@ -123,11 +123,11 @@ async function getTables() {
 				id: t.id,
 				label: t.name,
 				onClick: async () => {
-					activeTableId = t.id;
+					STATE.setActiveTableId(t.id);
 					document.getElementById("table-name").innerText = "";
 					document.getElementById("table-name").innerText = t.name;
-					console.log(activeTableId, t.name);
-					subscribeToTable(activeTableId);
+					console.log(STATE.getActiveTableId(), t.name);
+					subscribeToTable(STATE.getActiveTableId());
 					await loadAndRender();
 				}
 		}))
@@ -136,7 +136,7 @@ async function getTables() {
 // --- DATA FETCH FUNCTION ---
 // Fetches items from API and renders them in the UI
 async function loadAndRender() {
-	if (!activeTableId) return;
+	if (!STATE.getActiveTableId()) return;
 	// Ensure session exists before fetching data
 	const { data: { session } } = await AUTH.getSession();
 	if (!session) {
@@ -148,8 +148,7 @@ async function loadAndRender() {
 	console.log("LNR Current user ID:", session.user.id);
 
 	// Fetch items from API
-	const table_id = "debee654-6588-4377-a8d5-1bc5c786fbc5"
-	const items = await API.getItems(activeTableId);
+	const items = await API.getItems(STATE.getActiveTableId());
 
 	console.log("loadAndRender items:", items);
 
@@ -159,29 +158,26 @@ async function loadAndRender() {
 }
 
 
-function subscribeToTable(tableId) {
+async function subscribeToTable(tableId) {
   if (currentChannel) {
-    AUTH.supabase.removeChannel(currentChannel);
+    await currentChannel.unsubscribe();
     currentChannel = null;
   }
 
+  const channelName = `table:${tableId}:${crypto.randomUUID()}`;
+
   currentChannel = AUTH.supabase
-    .channel(`table:${tableId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "testhouse",
-        filter: `table_id=eq.${tableId}`
-      },
-      (payload) => {
-        console.log("payload received:", payload);
-        UI.handlePayload(payload);
-      }
-    )
-    .subscribe((status) => {
-      console.log("subscription status:", status);
+    .channel(channelName)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "testhouse",
+      filter: `table_id=eq.${tableId}`
+    }, (payload) => {
+      UI.handlePayload(payload);
+    })
+    .subscribe((status, err) => {
+      console.log("status:", status, err || "");
     });
 
   return currentChannel;

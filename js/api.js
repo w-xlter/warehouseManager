@@ -1,5 +1,5 @@
 import * as AUTH from "./auth.js";
-
+import { getActiveTableId } from "./state.js";
 /**
  * Fetch all items from the "testhouse" table.
  * Ensures a valid authenticated session exists before querying.
@@ -23,7 +23,7 @@ export async function getItems(table_id) {
 		const { data, error } = await AUTH.supabase
 		.from("testhouse")
 		.select("*")
-		.eq("table_id", table_id)
+		.eq("table_id", getActiveTableId())
 
 		if (error) {
 		console.error("Fetch error:", error);

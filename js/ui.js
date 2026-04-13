@@ -1,4 +1,5 @@
 import * as API from "./api.js"
+import { getActiveTableId } from "./state.js";
 
 /** 
  * Renders a table of items inside the "stockTable" element.
@@ -19,7 +20,7 @@ export function render(items, tableId) {
   // Append each data row
   items.forEach(item => {
     console.log("creating rows", item)
-    table.appendChild(createRow(item));
+    table.appendChild(createRow(item, tableId));
   });
 
   anchor.appendChild(table);
@@ -77,7 +78,7 @@ function createRow(data, { isInline = false, tableId } = {}) {
             const { data: real, error } = await API.insertRow("testhouse", {
                 product: product,
                 qty: qty,
-                table_id: tableId
+                table_id: getActiveTableId()
             });
 
             if (error || !real) {
@@ -525,6 +526,7 @@ export function updateAuthUI(session) {
 // --- Payload Handling from Database / Backend ---
 
 export function handlePayload(payload){
+    console.log("FULL PAYLOAD:", payload);
     const currentContainer = document.getElementById("stockTable");
     const currentTable = currentContainer.querySelector("table");
     console.log("received payload")
@@ -534,9 +536,10 @@ export function handlePayload(payload){
     }
 
     const {eventType, new: newRow, old } = payload 
-    const rowId = newRow?.id || old?.id
+    const rowId = newRow?.id ?? old?.id;
     const existingRow = document.getElementById(`row-${rowId}`)
-
+    console.log("event:", eventType, "new:", newRow, "old:", old);
+    console.log("resolved rowId:", rowId);
     if (eventType === "INSERT") {
         // New row added
         if (existingRow){
@@ -554,11 +557,18 @@ export function handlePayload(payload){
             newCell.appendChild(newDiv)
             existingRow.replaceChild(newCell, existingRow.cells[1]);
         }
-    } else if (eventType == "DELETE"){
-        // Remove row
+    } else if (eventType === "DELETE") {
+        const rowId = old?.id;
+
+        console.log("DELETE rowId:", rowId);
+
+        if (!rowId) return;
+
+        const existingRow = document.getElementById(`row-${rowId}`);
+
         if (existingRow) {
-            existingRow.remove()
-        }
+            existingRow.remove();
+    }
     }
 }
 
