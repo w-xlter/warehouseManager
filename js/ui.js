@@ -381,7 +381,71 @@ export function openModal({
     });
 }
 
+export async function loginModal(){
+    const emailField = document.createElement("input");
+    const passwordField = document.createElement("input");
+    emailField.className = "modal-input";
+    passwordField.className = "modal-input";
+    emailField.placeholder = "enter email";
+    passwordField.placeholder = "enter password";
 
+    const result = await openModal({
+        title: "login or register",
+        content: [
+            emailField,
+            passwordField,
+        ],
+        actions: [
+            {
+                label: "login",
+                className: "confirm",
+                onClick: () => {
+                    const email = emailField.value;
+                    const password = passwordField.value;
+                    const action = "login";
+                    return {email, password, action}
+                }
+            },
+            {
+                label: "register",
+                className: "confirm",
+                onClick: () => {
+                    const email = emailField.value;
+                    const password = passwordField.value;
+                    const action = "register"
+                    return {email, password, action}
+                }
+            }
+        ],
+        onKeydown: (e, { close }) => {
+            if (e.key === "Enter") {
+                const email = emailField.value;
+                const password = passwordField.value;
+                close({email, password});
+                return false; 
+            }
+        },
+    })
+    return result
+}
+
+
+
+export function togglePopover(session) {
+    const popover = document.getElementById("user-popover");
+    const emailEl = document.getElementById("user-email");
+    if (!session) return;
+    emailEl.textContent = session.user.email;
+    popover.classList.toggle("hidden");
+}
+
+// close when clicking outside
+document.addEventListener("click", (e) => {
+    const popover = document.getElementById("user-popover");
+    if (!popover.contains(e.target) && !e.target.closest("#profile-btn")) {
+        popover.classList.add("hidden");
+    }
+});
 
 // Handles addition or subtraction via modal input triggered by plus/minus buttons
 async function additionAndSubtraction (e, cell, row){
@@ -449,13 +513,13 @@ async function additionAndSubtraction (e, cell, row){
 
 // Updates the authentication UI to show current user status
 export function updateAuthUI(session) {
-  const status = document.getElementById("status");
-
-  if (session) {
-    status.textContent = "Logged in as " + session.user.email;
-  } else {
-    status.textContent = "Not logged in";
-  }
+    const status = document.getElementById("status");
+    const loginBtn = document.getElementById("login-modal-btn");
+    if (session) {
+        loginBtn.textContent = "profile";
+    } else {
+        loginBtn.textContent = "login";
+    }
 }
 
 // --- Payload Handling from Database / Backend ---

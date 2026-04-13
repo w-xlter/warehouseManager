@@ -213,7 +213,31 @@ td input:focus {
 .modal-row input:focus {
   border-color: #2a7352;
 }
+/* optional modal elements for when you're not using modal rows */
+.modal-label {
+  font-size: 13px;
+  color: #fafafa;
+  width: 40%;
 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-input {
+  background: #181718;
+  border: 1px solid #333333;
+  border-radius: 5px;
+
+  color: #fafafa;
+  text-align: center;
+  justify-content: center;
+  outline: none;
+}
+
+.modal-input:focus {
+  border-color: #2a7352;
+}
 /* modal buttons */
 .modal-actions {
   display: flex;
@@ -387,4 +411,38 @@ td input:focus {
   background: #2a7352;
   border: 1px solid #45bf88;
   color: #fafafa;
+}
+
+
+/* popover for user profile */
+.user-popover {
+    position: fixed;
+    top: 60px;          
+    right: 16px;
+
+    background: #181718;
+    border: 1px solid #333333;
+    border-radius: 10px;
+
+    padding: 12px 14px;
+    min-width: 180px;
+
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    z-index: 2000;
+	opacity: 0;
+	transform: translateY(-6px);
+	transition: all 0.15s ease;
+}
+
+.user-popover.hidden {
+	display: none;
+}
+
+.user-popover:not(.hidden) {
+	opacity: 1;
+	transform: translateY(0);
 }
