@@ -527,7 +527,7 @@ export function updateAuthUI(session) {
 export function handlePayload(payload){
     const currentContainer = document.getElementById("stockTable");
     const currentTable = currentContainer.querySelector("table");
-
+    console.log("received payload")
     if (!currentTable) {
         console.log("no table found?", currentTable, currentContainer)
         return;
@@ -543,7 +543,6 @@ export function handlePayload(payload){
             console.log("row updated optimistically, ignoring payload info");
             return;
         }
-        console.log("payload", payload.new)
         currentTable.appendChild(createRow(payload.new))
     } else if (eventType === "UPDATE") {
         // Existing row updated

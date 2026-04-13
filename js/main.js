@@ -126,7 +126,8 @@ async function getTables() {
 					activeTableId = t.id;
 					document.getElementById("table-name").innerText = "";
 					document.getElementById("table-name").innerText = t.name;
-					subscribeToTable(t.id);
+					console.log(activeTableId, t.name);
+					subscribeToTable(activeTableId);
 					await loadAndRender();
 				}
 		}))
@@ -159,27 +160,29 @@ async function loadAndRender() {
 
 
 function subscribeToTable(tableId) {
-	// close previous subscription
-	if (currentChannel) {
-		console.log("dropping", currentChannel)
-		AUTH.supabase.removeChannel(currentChannel);
-	}
-	
-	// create new one
-	console.log("subscribing to new channel");
-	currentChannel = AUTH.supabase
-		.channel(`table:${tableId}`)
-		.on(
-		"postgres_changes",
-		{
-			event: "*",
-			schema: "public",
-			table: "testhouse",
-			filter: `table_id=eq.${tableId}`
-		},
-		UI.handlePayload
-		)
-		.subscribe();
+  if (currentChannel) {
+    AUTH.supabase.removeChannel(currentChannel);
+    currentChannel = null;
+  }
 
-	return currentChannel;
+  currentChannel = AUTH.supabase
+    .channel(`table:${tableId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "testhouse",
+        filter: `table_id=eq.${tableId}`
+      },
+      (payload) => {
+        console.log("payload received:", payload);
+        UI.handlePayload(payload);
+      }
+    )
+    .subscribe((status) => {
+      console.log("subscription status:", status);
+    });
+
+  return currentChannel;
 }
