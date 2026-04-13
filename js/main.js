@@ -159,30 +159,26 @@ async function loadAndRender() {
 
 
 async function subscribeToTable(tableId) {
-	if (currentChannel) {
-		await AUTH.supabase.removeChannel(currentChannel);
-		currentChannel = null;
-	}
-	
-	console.log("channel should be empty: ", currentChannel)
-	currentChannel = AUTH.supabase
-		.channel(`table:${tableId}`)
-		.on(
-		"postgres_changes",
-		{
-			event: "*",
-			schema: "public",
-			table: "testhouse",
-			filter: `table_id=eq.${tableId}`
-		},
-		(payload) => {
-			console.log("payload received:", payload);
-			UI.handlePayload(payload);
-		}
-		)
-		.subscribe((status) => {
-		console.log("subscription status:", status);
-		});
+  if (currentChannel) {
+    await currentChannel.unsubscribe();
+    currentChannel = null;
+  }
 
-	return currentChannel;
+  const channelName = `table:${tableId}:${crypto.randomUUID()}`;
+
+  currentChannel = AUTH.supabase
+    .channel(channelName)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "testhouse",
+      filter: `table_id=eq.${tableId}`
+    }, (payload) => {
+      UI.handlePayload(payload);
+    })
+    .subscribe((status, err) => {
+      console.log("status:", status, err || "");
+    });
+
+  return currentChannel;
 }
