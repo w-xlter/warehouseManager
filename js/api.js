@@ -5,37 +5,38 @@ import * as AUTH from "./auth.js";
  * Ensures a valid authenticated session exists before querying.
  * Returns an empty array on failure to keep UI stable.
  */
-export async function getItems() {
-  try {
-    // Retrieve current auth session
-    const { data: sessionData, error: sessionError } = await AUTH.getSession();
-    if (sessionError) console.error("Session error:", sessionError);
+export async function getItems(table_id) {
+	try {
+		// Retrieve current auth session
+		const { data: sessionData, error: sessionError } = await AUTH.getSession();
+		if (sessionError) console.error("Session error:", sessionError);
 
-    const session = sessionData?.session;
+		const session = sessionData?.session;
 
-    // Guard: no session → no data access
-    if (!session) {
-      console.warn("No active session found");
-      return [];
-    }
+		// Guard: no session → no data access
+		if (!session) {
+		console.warn("No active session found");
+		return [];
+		}
 
-    // Fetch all rows (RLS will filter based on user permissions)
-    const { data, error } = await AUTH.supabase
-      .from("testhouse")
-      .select("*");
+		// Fetch all rows (RLS will filter based on user permissions)
+		const { data, error } = await AUTH.supabase
+		.from("testhouse")
+		.select("*")
+		.eq("table_id", table_id)
 
-    if (error) {
-      console.error("Fetch error:", error);
-      return [];
-    }
+		if (error) {
+		console.error("Fetch error:", error);
+		return [];
+		}
 
-    return data;
+		return data;
 
-  } catch (err) {
-    // Catch unexpected runtime errors (network, auth edge cases, etc.)
-    console.error("Unexpected error in getItems():", err);
-    return [];
-  }
+	} catch (err) {
+		// Catch unexpected runtime errors (network, auth edge cases, etc.)
+		console.error("Unexpected error in getItems():", err);
+		return [];
+	}
 }
 
 /**
@@ -45,12 +46,12 @@ export async function getItems() {
  * @param {object} updates - Fields to update
  */
 export async function updateRowById(table, id, updates) {
-  console.log("Updating row:", { table, id, updates });
+	console.log("Updating row:", { table, id, updates });
 
-  return await AUTH.supabase
-    .from(table)
-    .update(updates)
-    .eq("id", id);
+	return await AUTH.supabase
+		.from(table)
+		.update(updates)
+		.eq("id", id);
 }
 
 /**
@@ -60,13 +61,13 @@ export async function updateRowById(table, id, updates) {
  * @param {object} values - Row data
  */
 export async function insertRow(table, values) {
-  console.log("Inserting row:", { table, values });
+	console.log("Inserting row:", { table, values });
 
-  return await AUTH.supabase
-    .from(table)
-    .insert(values)
-    .select()
-    .single();
+	return await AUTH.supabase
+		.from(table)
+		.insert(values)
+		.select()
+		.single();
 }
 
 /**
@@ -75,10 +76,24 @@ export async function insertRow(table, values) {
  * @param {number} id - Row ID
  */
 export async function deleteRowById(table, id) {
-  console.log("Deleting row:", { table, id });
+	console.log("Deleting row:", { table, id });
 
-  return await AUTH.supabase
-    .from(table)
-    .delete()
-    .eq("id", id);
+	return await AUTH.supabase
+		.from(table)
+		.delete()
+		.eq("id", id);
+}
+
+
+export async function getAvailableTables() {
+    const { data, error } = await AUTH.supabase
+      .from("tables")
+      .select("*");
+
+    if (error) {
+      console.error("Fetch error:", error);
+      return [];
+    }
+
+    return data;
 }

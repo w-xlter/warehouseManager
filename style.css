@@ -359,6 +359,16 @@ td input:focus {
   color: #fafafa;
 }
 
+.menu-items {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+
+.menu-items.open {
+  max-height: 500px; /* large enough */
+}
+
 /* ===== Topbar ===== */
 .topbar {
   position: sticky;

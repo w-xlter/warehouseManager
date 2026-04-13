@@ -578,38 +578,97 @@ document.addEventListener("click", (e) => {
 });
 
 // Creates a menu section with buttons
-function createMenuSection(title, items) {
+function createMenuSection(title) {
     const section = document.createElement("div");
     section.className = "menu-section";
 
     const header = document.createElement("h3");
     header.textContent = title;
+    header.style.cursor = "pointer";
+
+    const itemsContainer = document.createElement("div");
+    itemsContainer.className = "menu-items";
+
+    // collapsed by default
+    let isOpen = false;
+
+    header.onclick = () => {
+        isOpen = !isOpen;
+        itemsContainer.classList.toggle("open", isOpen);
+    };
 
     section.appendChild(header);
+    section.appendChild(itemsContainer);
 
-    items.forEach(item => {
-        const btn = document.createElement("button");
-        btn.textContent = item.label;
-        btn.onclick = item.onClick;
-        section.appendChild(btn);
-    });
+    return {
+        section,
 
-    return section;
+        // replace everything
+        setItems(items) {
+            itemsContainer.innerHTML = "";
+            items.forEach(item => this.addItem(item));
+        },
+
+        // add single item
+        addItem(item) {
+            const btn = document.createElement("button");
+            btn.textContent = item.label;
+            btn.onclick = item.onClick;
+
+            btn.dataset.id = item.id;
+
+            itemsContainer.appendChild(btn);
+        },
+
+        // update existing item
+        updateItem(item) {
+            const btn = itemsContainer.querySelector(`[data-id="${item.id}"]`);
+            if (!btn) return;
+
+            btn.textContent = item.label;
+            btn.onclick = item.onClick;
+        },
+
+        // remove item
+        removeItem(id) {
+            const btn = itemsContainer.querySelector(`[data-id="${id}"]`);
+            if (btn) btn.remove();
+        }
+    };
 }
 
-// Append sections to sidebar
-sidebar.appendChild(
-  createMenuSection("General", [
-    { label: "Dashboard", onClick: () => console.log("go dashboard") },
-    { label: "Stock", onClick: () => console.log("go stock") }
-  ])
-);
 
-sidebar.appendChild(
-  createMenuSection("Admin", [
-    { label: "Users", onClick: () => console.log("manage users") }
-  ])
-);
+let magazziniSection = null;
+
+export function initSidebar() {
+    const sidebar = document.getElementById("sidebar");
+
+    const { section, setItems, addItem, updateItem, removeItem } =
+        createMenuSection("I miei magazzini");
+
+    sidebar.appendChild(section);
+
+    // store reference internally
+    magazziniSection = { setItems, addItem, updateItem, removeItem };
+}
+
+
+export function setMagazzini(items) {
+    console.log("setting with items:", items)
+    magazziniSection?.setItems(items);
+}
+
+export function addMagazzino(item) {
+    magazziniSection?.addItem(item);
+}
+
+export function updateMagazzino(item) {
+    magazziniSection?.updateItem(item);
+}
+
+export function removeMagazzino(id) {
+    magazziniSection?.removeItem(id);
+}
 
 // --- Modal for Editing Row Name / Deleting Row ---
 
@@ -704,4 +763,20 @@ function openEditModal({ rowId, currentName, row }) {
     overlay.onclick = (e) => {
         if (e.target === overlay) overlay.remove();
     };
+}
+
+
+export async function sidebarTableList(tables) {
+    const anchor = document.getElementById("stockTable");
+    anchor.innerHTML = ""; // clear previous content
+
+    const containerTable = document.createElement("table");
+
+    // Append each data row
+    tables.forEach(table => {
+        console.log("creating rows", table)
+        containerTable.appendChild(createRow(table));
+    });
+
+    anchor.appendChild(containerTable);
 }

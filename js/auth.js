@@ -68,6 +68,6 @@ export async function getSession() {
  * Registers a callback function to run whenever the authentication state changes.
  * @param {function} callback - Function receiving (event, session) on auth changes.
  */
-export function onAuthChange(callback) {
+export async function onAuthChange(callback) {
   supabase.auth.onAuthStateChange(callback);
 }
