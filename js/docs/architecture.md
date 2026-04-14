@@ -19,6 +19,7 @@ Frontend (Vanilla JS)
 │
 ├── auth.js   → Authentication layer (Supabase)
 ├── api.js    → Database interaction layer
+├── state.js  → State handler
 ├── ui.js     → UI rendering + interaction logic
 ├── main.js   → App entry point / orchestration
 │
@@ -40,6 +41,7 @@ Each file, as suggested, has a **single responsibility**:
 | ---------- | --------------------------------- |
 | `auth.js`  | Authentication + session handling |
 | `api.js`   | Database operations               |
+| `state.js` | Stores and exposes states         |
 | `ui.js`    | DOM rendering + user interaction  |
 | `main.js`  | App orchestration                 |
 
