@@ -20,12 +20,12 @@ The main module acts as an **orchestrator**. It does not contain business logic 
 
 When the DOM is fully loaded, the application executes the following sequence:
 
-### 1. Session Check
+### Session Check
 - Calls `AUTH.getSession()`
 - Determines whether a user is already logged in
-- If a session exists → data is loaded immediately
+- If a session exists → table access is loaded immediately, otherwise prompt the login
 
-### 2. Authentication Listener
+### Authentication Listener
 - Registers `AUTH.onAuthChange()`
 - Keeps UI in sync with login/logout state changes
 
@@ -55,6 +55,13 @@ Triggered by `#logout` button:
 
 ## Data Loading
 
+## `getTables`
+
+This function is responsible for:
+- Verifying an active session
+- Fetching items from the database via `API.getAvailableTables()`
+- Rendering results using `UI.setMagazzini()`
+
 ### `loadAndRender()`
 
 This function is responsible for:
@@ -62,15 +69,13 @@ This function is responsible for:
 - Fetching items from the database via `API.getItems()`
 - Rendering results using `UI.render()`
 
-It is called:
-- on initial page load (if session exists)
-- after successful login
+It is called when a user selects a table from the available ones in the sidebar.
 
 ---
 
 ## Real-Time Database Subscription
 
-The application listens to changes in the `testhouse` table using Supabase Realtime:
+The application listens to changes in the `testhouse` table using Supabase Realtime via the `subscribeToTable(tableId)` function:
 
 Events handled:
 - INSERT → new rows added to UI
@@ -82,16 +87,6 @@ Handler:
 
 ---
 
-## UI Status Fallback
-
-A manual status update is applied to the `#status` element:
-
-- If session exists → shows logged-in email
-- Otherwise → shows logged out state
-
-This is redundant because `UI.updateAuthUI()` also handles this, but if it's not broken don't fix it yk.
-
----
 
 ## Key Responsibilities Summary
 

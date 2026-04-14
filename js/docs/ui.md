@@ -1,302 +1,181 @@
-# `/docs/ui.md`
+This module is a **DOM-driven UI layer**. It intentionally avoids frameworks (never used them before, don't know how) and instead relies on:
 
-This document describes the UI module of the warehouse management application.
+- Direct DOM manipulation
+- Event delegation
+- Optimistic UI updates
+- Stateless rendering patterns
 
-The UI layer is responsible for:
-- rendering and updating DOM elements
-- handling user interactions (clicks, inputs, modals)
-- optimistic UI updates
-- reacting to real-time database events
-- managing sidebar navigation
-- handling modal-based workflows
+## Design Philosophy
 
-It does NOT:
-- directly manage authentication
-- perform raw database access (delegated to `api.js`)
-- manage session state (delegated to `auth.js`)
+This code follows a few principles:
 
----
+### Optimistic UI First
+All user actions immediately reflect in the UI before server confirmation. Failures trigger rollback.
 
-# 1. Quantity Adjustment Flow (`additionAndSubtraction`)
+### Stateless Rendering
+There is no internal state store. The DOM is treated as the source of truth (might need to change this in the future).
 
-## Purpose
-Handles increment/decrement operations for stock quantities using a modal input system.
+### Composability
+Small utilities (`createRow`, `createQuantityCell`, `openModal`) are reused everywhere.
 
-Triggered when a user clicks:
-- `+` button → increases quantity
-- `-` button → decreases quantity
+### Event Delegation
+Instead of binding events per element, listeners are attached to containers.
 
 ---
 
-## Flow Overview
+# Table Rendering System
 
-1. Read current quantity from DOM
-2. Determine operation type (`+` or `-`)
-3. Build modal UI dynamically:
-   - label shows current value + operation
-   - numeric input for delta value
-4. Open modal via `openModal`
-5. Wait for user input
-6. Validate input
-7. Apply optimistic UI update
-8. Persist change to database
-9. Roll back UI if API fails
+## `render(items, tableId)`
 
----
+This is the main entry point for displaying data.
 
-## Key Behaviors
+### Responsibilities:
+- Clears the container (`#stockTable`)
+- Creates a fresh `<table>`
+- Injects:
+  - An inline input row (always first)
+  - A list of data rows
 
-### Modal structure is dynamically built
-A `div.modal-row` is created manually and passed into the modal system.
 
-This allows full UI flexibility without coupling to modal implementation.
+# Row Creation Abstraction
 
----
+## createRow(data, options)
 
-### Keyboard handling
-- `Enter` → submits value
-- handled via `onKeydown` callback passed into modal system
+This function is the core rendering primitive.
 
----
+It supports two modes:
 
-### Optimistic UI update pattern
-Before database confirmation:
-- UI is immediately updated
-- improves perceived responsiveness
+### Inline Mode (isInline = true)
 
-If API fails:
-- original value is restored
+Used for creating new entries.
 
----
+Renders:
+  - Product input
+  - Quantity input
 
-# 2. Authentication UI (`updateAuthUI`)
+Handles keyboard navigation:
+  - Enter on product → move to quantity
+  - Enter on quantity → submit
 
-## Purpose
-Updates the top status indicator based on authentication state.
 
----
+#### Submission Flow
+  - Validate input
+  - Create temporary row (optimistic)
+  - Insert into DOM
+  - Clear inputs
+  - Call API
+  - Replace temp row with real data OR rollback
 
-## Behavior
+### Display Mode
 
-- If session exists:
-  - displays user email
-- If no session:
-  - shows logged-out state
+Used for existing rows.
 
----
+Behavior:
+  -Assigns row ID
 
-## Responsibility
-This function is purely presentational.
+Renders:
+  - Product name (text)
+  - Quantity (via createQuantityCell)
 
-It does NOT:
-- fetch session
-- manage auth state
+# Quantity System
+`createQuantityCell(quantity)`
 
----
+Encapsulates quantity display + controls.
 
-# 3. Real-time Database Updates (`handlePayload`)
+[ - ]  [ 42 ]  [ + ]
 
-## Purpose
-Handles live updates from Supabase Realtime subscription.
+# Event Delegation 
 
-Ensures UI stays in sync with backend changes.
+`tableContainer.addEventListener("click", async (e) => { ... })`
 
----
+## Responsibilities:
+  - Detect clicked cell
+  - Route behavior based on target:
+  - + / - → modal flow
+  - Cell click → inline edit
 
-## Event Types
+# Increment / Decrement Flow
 
-### INSERT
-- Adds new row to table
-- Skips update if row already exists (optimistic UI protection)
+Handled by:
 
-### UPDATE
-- Updates:
-  - product name (cell 0)
-  - quantity cell (cell 1)
+additionAndSubtraction(e, cell, row)
 
-- Rebuilds quantity cell using `createQuantityCell`
+Behavior:
+  - Detect button (+ or -)
+  - Accept user input via modal
+  - Optimistically update UI and persist via API / rollback if needed
 
-### DELETE
-- Removes row from DOM if it exists
+# loginModal()
 
----
+Uses openModal to implement auth flow.
 
-## Design Pattern
+Returns:
+  - { email, password, action }
 
-This function enforces **event-driven UI consistency**:
-- backend is source of truth
-- UI reacts to changes asynchronously
 
----
+# updateAuthUI(session)
 
-# 4. Sidebar Navigation System
+Simple UI toggle:
 
-## Purpose
-Manages a collapsible sidebar menu.
+  - Logged in → "profile"
+  - Logged out → "login"
 
----
 
-## Behavior
+# togglePopover(session)
+  - Injects user email
+  - Toggles popover visibility
 
-### Toggle logic
-- clicking `#menu-btn` toggles sidebar visibility
-- clicking outside closes sidebar
 
----
+# Real-Time Sync 
 
-## Menu construction
+`handlePayload(payload)`
 
-### `createMenuSection(title, items)`
-Builds a UI section with:
-- title header
-- list of buttons
+Processes backend events.
 
-Each item contains:
-- `label`
-- `onClick` handler
+Supported Events:
+  - INSERT
+  - UPDATE
+  - DELETE
+  - INSERT
+If row already exists → ignore (optimistic case)
 
----
+# Sidebar System
+Initialization: `initSidebar()`
 
-## Design Note
-Sidebar is fully data-driven:
-- UI is generated from configuration arrays
-- no hardcoded button logic inside DOM
+Creates a section: `createMenuSection(title)`
 
----
+Returns a controller object with:
+  - setItems
+  - addItem
+  - updateItem
+  - removeItem
 
-# 5. Row Edit Modal (`openEditModal`)
+## Public API
+  - setMagazzini
+  - addMagazzino
+  - updateMagazzino
+  - removeMagazzino
 
-## Purpose
-Allows editing or deleting a table row (product name + row removal).
+specific the "magazzino" section
 
----
+# Row Editing & Deletion
 
-## Trigger condition
+Triggered by clicking on name cell.
 
-Activated when:
-- clicking first column (`cellIndex === 0`)
-- row is NOT an inline input row
-- click is not on a button
+`openEditModal({ rowId, currentName, row })`
 
----
+Custom modal (not using openModal yet).
 
-## Modal structure
+Features:
+- Edit name
+- Delete row
+- Cancel
 
-Contains:
-- input field (pre-filled with current name)
-- action buttons:
-  - Save
-  - Cancel
-  - Delete
 
----
 
-## Actions
+# This module relies on shared UI utilities defined elsewhere:
 
-### Save
-1. Update UI immediately (optimistic)
-2. Call `API.updateRowById`
-3. Roll back on failure
-
----
-
-### Delete
-1. Remove row immediately (optimistic)
-2. Call `API.deleteRowById`
-3. Roll back on failure if needed
-
----
-
-### Cancel
-- closes modal without changes
-
----
-
-## DOM Strategy
-This modal is fully manual DOM construction:
-- no abstraction layer
-- direct control over layout and behavior
-
----
-
-# 6. UI Design Patterns Used
-
-## 6.1 Optimistic UI
-Used in:
-- quantity updates
-- row edits
-- deletions
-
-Pattern:
-> update UI first → confirm with backend → rollback if error
-
----
-
-## 6.2 Event Delegation
-Used in:
-- table click handling
-- sidebar interactions
-
-Benefits:
-- fewer listeners
-- dynamic row support
-
----
-
-## 6.3 Real-time synchronization
-UI is continuously synced with backend events:
-- INSERT
-- UPDATE
-- DELETE
-
----
-
-## 6.4 Manual DOM construction
-No framework abstraction:
-- explicit element creation
-- predictable rendering flow
-- full control over UI structure
-
----
-
-# 7. Module Responsibility Summary
-
-This file is responsible for:
-
-- Table rendering interactions
-- Quantity manipulation workflows
-- Row editing and deletion UI
-- Sidebar navigation system
-- Real-time database UI synchronization
-- Modal-driven interaction flows
-
----
-
-# 8. What this file should NOT do
-
-To maintain separation of concerns:
-
-- No authentication logic
-- No direct Supabase queries
-- No business rules (permissions, validation rules)
-- No persistent state management
-
----
-
-# 9. Architectural Note
-
-This UI module acts as a **reactive DOM layer**:
-- backend → emits events
-- UI → reacts and updates view
-- API layer → performs persistence
-- auth layer → manages identity
-
-
-## External Dependencies
-
-This module relies on shared UI utilities defined elsewhere:
-
-- `openModal` → defined in `/docs/modal-system.md` (or modal module)
+- `openModal` → defined in `/docs/openModal.md` 
   - Used for all modal-based interactions
   - Handles lifecycle, key events, overlay behavior, and resolution flow
   - UI module only provides content and behavior, not modal infrastructure
