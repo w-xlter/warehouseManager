@@ -12,7 +12,7 @@ It does NOT:
 
 ---
 
-# 1. Overview
+# Overview
 
 This module provides CRUD operations for the `testhouse` table:
 
@@ -25,7 +25,7 @@ All operations are executed through Supabase and are subject to Row Level Securi
 
 ---
 
-# 2. Authentication Dependency
+# Authentication Dependency
 
 This module depends on `auth.js` for:
 
@@ -36,10 +36,10 @@ Before executing any read operation, the module verifies that a valid session ex
 
 ---
 
-# 3. Data Fetching (`getItems`)
+# Data Fetching (`getItems`)
 
 ## Purpose
-Retrieves all rows from the `testhouse` table for the authenticated user.
+Retrieves all rows from the `testhouse` table for the authenticated user given a table_id.
 
 ---
 
@@ -48,7 +48,7 @@ Retrieves all rows from the `testhouse` table for the authenticated user.
 1. Retrieve current session via `AUTH.getSession()`
 2. Validate session exists
 3. Query Supabase table:
-   - `select("*")` from `testhouse`
+   - `select("*")` from `testhouse` where `"table_id", getActiveTableId()`
 4. Return results or empty array on failure
 
 ---
@@ -73,7 +73,7 @@ This ensures UI stability and prevents crashes.
 
 ---
 
-# 4. Update Operation (`updateRowById`)
+# Update Operation (`updateRowById`)
 
 ## Purpose
 Updates a specific row in a given table.
@@ -104,7 +104,7 @@ Updates a specific row in a given table.
 
 ---
 
-# 5. Insert Operation (`insertRow`)
+# Insert Operation (`insertRow`)
 
 ## Purpose
 Inserts a new row into a specified table.
@@ -133,7 +133,7 @@ Logs insert payload for debugging purposes.
 
 ---
 
-# 6. Delete Operation (`deleteRowById`)
+# Delete Operation (`deleteRowById`)
 
 ## Purpose
 Deletes a row by ID.
@@ -155,7 +155,7 @@ Deletion is enforced by:
 
 ---
 
-# 7. Error Handling Strategy
+# Error Handling Strategy
 
 This module does NOT throw errors upward by default.
 
@@ -165,9 +165,45 @@ Instead:
 
 ---
 
-# 8. Design Patterns Used
+# Table Access Fetching (`getAvailableTables`)
 
-## 8.1 Thin Data Layer
+## Purpose
+Retrieves all tables from the `tables` table for the authenticated user.
+
+---
+
+## Flow
+
+1. Query Supabase table:
+   - `select("*")` from `tables`
+2. Return results or empty array on failure
+
+---
+
+## Security Model
+
+Access control is enforced by:
+- Supabase Row Level Security (RLS)
+
+This function does NOT manually filter data; it relies on database-level rules.
+
+---
+
+## Failure Handling
+
+Returns `[]` in all failure cases:
+- missing session
+- query error
+- unexpected runtime error
+
+This ensures UI stability and prevents crashes.
+
+---
+
+
+# Design Patterns Used
+
+## Thin Data Layer
 This module is intentionally minimal:
 - no UI logic
 - no state management
@@ -175,20 +211,20 @@ This module is intentionally minimal:
 
 ---
 
-## 8.2 RLS-First Security Model
+## RLS-First Security Model
 All access control is handled in the database:
 - this module assumes policies are correctly configured
 
 ---
 
-## 8.3 Fail-Safe Returns
+## Fail-Safe Returns
 `getItems()` always returns an array:
 - prevents UI crashes
 - simplifies rendering logic
 
 ---
 
-# 9. External Dependencies
+# External Dependencies
 
 - `auth.js`
   - provides Supabase client
@@ -203,7 +239,7 @@ All access control is handled in the database:
 
 ---
 
-# 10. What this module should NOT do
+# What this module should NOT do
 
 To maintain clean separation of concerns:
 
